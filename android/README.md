@@ -33,7 +33,7 @@ Android 5.0+ (API21), четыре ABI. Физический телефон, You
 
 ## Сборка из исходников
 JDK17, Android SDK34, Gradle wrapper. Для сохранённых JNI:
-    ./gradlew -PveyraPrebuiltNative assembleRelease testDebugUnitTest lintDebug
+    sh ./gradlew -PveyraPrebuiltNative assembleRelease testDebugUnitTest lintDebug
 Выход release — неподписанный; подпиши собственным ключом через Android apksigner.
 Собственный ключ не сможет обновить выданный APK. Закрытый ключ не включён.
 Для полной native-сборки без флага нужны NDK28.2.13676358 и CMake3.22.1.

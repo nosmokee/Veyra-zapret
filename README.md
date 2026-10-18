@@ -43,9 +43,9 @@ APK обновляет прежнюю Veyra Next с тем же тестовым
 Автоматические GitHub-архивы Source code содержат этот репозиторий с актуальным кодом беты.
 Это **исходники**, а не готовые установщики.
 - `android/`: Kotlin/XML, полные native/dependency sources и сохранённые JNI. JDK17, SDK34,
-  `./gradlew -PveyraPrebuiltNative assembleRelease`; release нужно подписать своим ключом.
+  `sh ./gradlew -PveyraPrebuiltNative assembleRelease`; release нужно подписать своим ключом.
   Для полной native-сборки без флага: NDK28.2.13676358, CMake3.22.1. Закрытого ключа подписи нет.
-- `linux/`: Python/UI/bridge/pyaes и ByeDPI C-source. Сначала `./BUILD-LINUX.sh` (Zig0.13.0), затем `./veyra`.
+- `linux/`: Python/UI/bridge/pyaes и ByeDPI C-source. Сначала `sh ./BUILD-LINUX.sh` (Zig0.13.0), затем `sh ./veyra`.
 - `windows/`: C#/WPF-приложение и тесты. Native `engine.zip` исключён до завершения лицензионной сверки;
   требуемый исходный хэш и инструкции — [BUILD](windows/source/BUILD.txt).
 
@@ -55,3 +55,7 @@ APK обновляет прежнюю Veyra Next с тем же тестовым
 Android — GPLv3 и отдельные лицензии компонентов: [LICENSE](android/LICENSE), [PROVENANCE](android/PROVENANCE.md).
 Linux: [LICENSE](linux/LICENSE), [third parties](linux/THIRD-PARTY.md), `linux/LICENSES/`.
 Windows: [notices](windows/THIRD-PARTY-NOTICES.txt), `windows/licenses/`. Единой лицензии на все компоненты нет.
+
+При загрузке исходников через веб-интерфейс GitHub исполняемый бит shell-скриптов может отсутствовать.
+Используй `sh ./gradlew`, `sh ./BUILD-LINUX.sh`, `sh ./veyra` или сначала `chmod +x` для нужного скрипта.
+В готовых Linux TAR.GZ права запуска сохранены.
