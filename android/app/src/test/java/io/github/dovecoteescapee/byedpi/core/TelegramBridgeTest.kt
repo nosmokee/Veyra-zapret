@@ -18,7 +18,7 @@ class TelegramBridgeTest {
     @Test fun base64Vectors() {assertEquals("Zg==",TgWebSocket.base64("f".toByteArray()));assertEquals("Zm8=",TgWebSocket.base64("fo".toByteArray()));assertEquals("Zm9v",TgWebSocket.base64("foo".toByteArray()))}
     @Test fun routesPreserveDcAndUseOfficialHosts() {
         for(dc in 1..5){assertTrue(TgWire.hosts(dc,false)[0].contains("kws$dc."));assertTrue(TgWire.hosts(dc,true)[0].contains("kws$dc-1."));assertTrue(TgWire.hosts(dc,false).all {it.endsWith(".web.telegram.org")})}
-        assertEquals("149.154.167.220",TgWire.addresses(2,"kws2.web.telegram.org")[0]);assertEquals(listOf("kws3.web.telegram.org"),TgWire.addresses(3,"kws3.web.telegram.org"))
+        assertEquals("149.154.167.220",TgWire.addresses(2,"kws2.web.telegram.org")[1]);assertEquals(listOf("kws3.web.telegram.org"),TgWire.addresses(3,"kws3.web.telegram.org"))
     }
     @Test fun rejectUnknownDc() {try{TgWire.hosts(9,false);fail()}catch(_:IllegalArgumentException){}}
     @Test fun rejectUnknownHello() {try{TgWire.decode(ByteArray(64),ByteArray(16));fail()}catch(_:IllegalArgumentException){}}

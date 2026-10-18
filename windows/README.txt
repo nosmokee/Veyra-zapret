@@ -1,4 +1,6 @@
-Veyra 1.1 Beta — Windows x64 (1.1-beta.1)
+Telegram fix beta.2: persistent local port, 64 sessions, bulk WebSocket masking. Stop old copies first. Re-add the active proxy in Telegram once if old settings remain. Detailed checks and limits: TELEGRAM-FIX-REPORT.md.
+
+Veyra 1.1 Beta — Windows x64 (1.1-beta.2)
 
 Распакуй архив целиком. Требуются Windows x64 и .NET Framework4.8.
 Запусти Veyra.exe. Для winws/WinDivert требуется подтверждение прав администратора.

@@ -9,6 +9,7 @@ import io.github.dovecoteescapee.byedpi.utility.getPreferences
 object TelegramRuntime {
     @Volatile var bridge:TelegramBridge?=null;private set
     private var owner:Any?=null
+    private val routes=java.util.concurrent.ConcurrentHashMap<String,Pair<String,String>>()
     @Synchronized fun start(context:Context,service:Any,port:Int) {
         if(!context.getPreferences().getBoolean("veyra_telegram_enabled",false))return
         check(bridge==null) { "Telegram bridge already owned by a service" }
@@ -17,9 +18,11 @@ object TelegramRuntime {
         val secret=if(saved==null) TgWire.random(16).also {check(prefs.edit().putString("secret",Base64.encodeToString(it,Base64.NO_WRAP)).commit())} else Base64.decode(saved,Base64.NO_WRAP).also {require(it.size==16)}
         val instance=TelegramBridge(secret,{dc,media->
             val started=System.nanoTime();var last:Exception?=null;var result:TgSocket?=null
-            routes@ for(host in TgWire.hosts(dc,media))for(address in TgWire.addresses(dc,host)) {
+            val routeKey="$dc:$media"
+            val candidates=(listOfNotNull(routes[routeKey])+TgWire.hosts(dc,media).flatMap {h->TgWire.addresses(dc,h).map {a->h to a}}).distinct()
+            routes@ for((host,address) in candidates) {
                 if(bridge?.running!=true || (System.nanoTime()-started)>25_000_000_000L)break@routes
-                try {Log.i("VeyraTelegram","WSS host=$host address=$address TLS=verified via local SOCKS");result=TgWebSocket.connect(host,address,port);break@routes} catch(e:Exception) {last=e;Log.w("VeyraTelegram","WSS failed: ${e.javaClass.simpleName}")}
+                try {Log.i("VeyraTelegram","WSS host=$host address=$address TLS=verified via local SOCKS");result=TgWebSocket.connect(host,address,port);routes[routeKey]=host to address;break@routes} catch(e:Exception) {last=e;routes.remove(routeKey,host to address);Log.w("VeyraTelegram","WSS failed: ${e.javaClass.simpleName}")}
             }
             result ?: throw java.io.IOException("Official Telegram WSS unavailable",last)
         },{text->Log.w("VeyraTelegram",text)})

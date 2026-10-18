@@ -3,7 +3,7 @@ import java.net.Socket
 /** Explicit optional network test. No login, phone, chat history or account required. */
 object TelegramLive {
  @JvmStatic fun main(args:Array<String>) {
-  for(dc in (1..5).flatMap { listOf(it,-it) })for(proto in listOf(0xeeeeeeee.toInt(),0xdddddddd.toInt(),0xefefefef.toInt())) {
+  for(dc in ((1..5).toList()+203).flatMap { listOf(it,-it) })for(proto in listOf(0xeeeeeeee.toInt(),0xdddddddd.toInt(),0xefefefef.toInt())) {
    val secret=TgWire.random(16)
    TelegramBridge(secret,{id,media->
     var result:TgSocket?=null;var last:Exception?=null

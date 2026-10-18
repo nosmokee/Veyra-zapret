@@ -1,3 +1,13 @@
+# 1.1-beta.2 — Telegram stability (Android / Windows)
+
+- Android: signed DC203, 32 сессии, bulk AES-CTR / буферизация.
+- Windows: 64 сессии, bulk WS frames, постоянный Telegram-порт.
+- Обе платформы: приоритет официального DNS, кэш успешного TLS/WSS маршрута без изменения проверки TLS.
+- Подробности проверок, обновления и ограничений: TELEGRAM-FIX-REPORT.md.
+- Linux не менялся. Видеозагрузка из аккаунта, физический Android VPN и нативный Windows здесь не проверены.
+
+---
+
 # Veyra 1.1 Beta / 1.1-beta.1
 
 Beta release sources. See TEST-REPORT.md for test scope and limitations.

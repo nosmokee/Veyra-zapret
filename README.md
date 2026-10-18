@@ -1,3 +1,13 @@
+# Veyra 1.1 Beta 2 — Android / Windows Telegram fix
+
+Релиз: https://github.com/nosmokee/Veyra-zapret/releases/tag/v1.1-beta.2
+
+Исправлены обработка DC203 и лимит сессий Android, ускорена передача данных, на Windows сохраняется порт Telegram-прокси. Инструкция обновления и точная граница проверок: [TELEGRAM-FIX-REPORT.md](TELEGRAM-FIX-REPORT.md).
+
+Важно: при ошибке «некорректные настройки» останови старые копии Veyra/Test, запусти мост и один раз заново добавь его прокси из Veyra в Telegram. Android обновляй без удаления приложения/данных. Реальное воспроизведение видео в сети пользователя не подтверждено лабораторными тестами. Linux остаётся на beta.1.
+
+---
+
 # Veyra 1.1 Beta
 
 Локальный обход DPI с интерфейсом для Android и Linux. Внешний IP **не меняется**.

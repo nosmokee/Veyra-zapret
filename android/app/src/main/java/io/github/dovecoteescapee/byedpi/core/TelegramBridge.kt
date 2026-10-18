@@ -30,7 +30,7 @@ object TgWire {
         val p = TgCtr(hash(h.copyOfRange(8,40),secret),h.copyOfRange(40,56)).apply(h)
         val dc = ((p[60].toInt() and 255) or (p[61].toInt() shl 8)).toShort().toInt()
         val protocol = le(p,56)
-        require(kotlin.math.abs(dc) in 1..5 && protocol in listOf(0xeeeeeeee.toInt(),0xdddddddd.toInt(),0xefefefef.toInt())) { "Invalid production DC/protocol" }
+        require((kotlin.math.abs(dc) in 1..5 || kotlin.math.abs(dc)==203) && protocol in listOf(0xeeeeeeee.toInt(),0xdddddddd.toInt(),0xefefefef.toInt())) { "Invalid production DC/protocol" }
         return Hello(dc,protocol)
     }
     fun relay(dc: Int, protocol: Int): ByteArray {
@@ -40,28 +40,28 @@ object TgWire {
         val encrypted=TgCtr(h.copyOfRange(8,40),h.copyOfRange(40,56)).apply(p)
         encrypted.copyInto(h,56,56,64);return h
     }
-    fun hosts(dc: Int, media: Boolean): List<String> {
+    fun hosts(id: Int, media: Boolean): List<String> {
+        val dc=if(id==203) 2 else id
         require(dc in 1..5)
         val alias=listOf("","pluto","venus","aurora","vesta","flora")[dc]+".web.telegram.org"
         val base="kws$dc.web.telegram.org";val file="kws$dc-1.web.telegram.org"
         return if(media) listOf(file,base,alias) else listOf(base,file,alias)
     }
-    fun addresses(dc: Int,host: String) = if(dc==2 || dc==4) listOf("149.154.167.220",host) else listOf(host)
+    fun addresses(dc: Int,host: String) = if(dc==2 || dc==4) listOf(host,"149.154.167.220") else listOf(host)
 }
 
+/** Provider-backed streaming CTR: one bulk operation, not one JCE call per 16 bytes. */
 class TgCtr(key: ByteArray, iv: ByteArray) {
-    private val cipher=Cipher.getInstance("AES/ECB/NoPadding").apply { init(Cipher.ENCRYPT_MODE,SecretKeySpec(key,"AES")) }
-    private val counter=iv.clone().also { require(it.size==16) }
-    private var block=ByteArray(16);private var pos=16
-    fun apply(input: ByteArray): ByteArray = ByteArray(input.size) { i ->
-        if(pos==16) { block=cipher.doFinal(counter);for(j in 15 downTo 0) { counter[j]=(counter[j]+1).toByte();if(counter[j]!=0.toByte()) break };pos=0 }
-        (input[i].toInt() xor block[pos++].toInt()).toByte()
+    private val cipher=Cipher.getInstance("AES/CTR/NoPadding").apply {
+        require(iv.size==16)
+        init(Cipher.ENCRYPT_MODE,SecretKeySpec(key,"AES"),javax.crypto.spec.IvParameterSpec(iv))
     }
+    fun apply(input: ByteArray): ByteArray = if(input.isEmpty()) byteArrayOf() else cipher.update(input)
 }
 interface TgSocket:Closeable { fun send(data: ByteArray);fun receive(): ByteArray?;fun ping() {} }
 
 class TgWebSocket private constructor(private val socket: Socket):TgSocket {
-    private val input=socket.getInputStream();private val output=socket.getOutputStream();private val writing=Any()
+    private val input=BufferedInputStream(socket.getInputStream(),65536);private val output=socket.getOutputStream();private val writing=Any()
     companion object {
         fun connect(host: String,address: String,proxyPort: Int?):TgSocket {
             val raw=Socket()
@@ -98,7 +98,7 @@ class TgWebSocket private constructor(private val socket: Socket):TgSocket {
     private fun frame(op: Int,b: ByteArray) = synchronized(writing) {
         require(b.size<=TgWire.MAX);val packet=ByteArrayOutputStream();packet.write(0x80 or op)
         when {b.size<126->packet.write(0x80 or b.size);b.size<65536->{packet.write(0xfe);packet.write(b.size shr 8);packet.write(b.size)};else->{packet.write(0xff);for(n in 7 downTo 0)packet.write((b.size.toLong() ushr (8*n)).toInt())}}
-        val mask=TgWire.random(4);packet.write(mask);for(n in b.indices)packet.write(b[n].toInt() xor mask[n%4].toInt());output.write(packet.toByteArray());output.flush()
+        val mask=TgWire.random(4);packet.write(mask);val masked=ByteArray(b.size) { n -> (b[n].toInt() xor mask[n%4].toInt()).toByte() };packet.write(masked);output.write(packet.toByteArray());output.flush()
     }
     override fun send(data: ByteArray) { frame(2,data) }
     override fun ping() {frame(9,byteArrayOf())}
@@ -122,7 +122,7 @@ class TgWebSocket private constructor(private val socket: Socket):TgSocket {
 class TelegramBridge(private val secret: ByteArray,private val dial:(Int,Boolean)->TgSocket,private val report:(String)->Unit={}):Closeable {
     private val live=AtomicBoolean(false)
     private val clients=java.util.Collections.newSetFromMap(ConcurrentHashMap<Socket,Boolean>());private val remotes=java.util.Collections.newSetFromMap(ConcurrentHashMap<TgSocket,Boolean>())
-    private val pool=ThreadPoolExecutor(0,48,30,TimeUnit.SECONDS,SynchronousQueue<Runnable>(),{ r->Thread(r,"Veyra-TG").apply {isDaemon=true} })
+    private val pool=ThreadPoolExecutor(0,66,30,TimeUnit.SECONDS,SynchronousQueue<Runnable>(),{ r->Thread(r,"Veyra-TG").apply {isDaemon=true} })
     private val timer=Executors.newSingleThreadScheduledExecutor {r->Thread(r,"Veyra-TG-ping").apply{isDaemon=true}}
     private var listener:ServerSocket?=null
     val up=AtomicLong();val down=AtomicLong();val sessions=AtomicLong()
@@ -147,13 +147,13 @@ class TelegramBridge(private val secret: ByteArray,private val dial:(Int,Boolean
             }
         }
         listener=server;live.set(true)
-        pool.execute {try{while(live.get()){val client=server.accept();if(!live.get()||clients.size>=16){client.close();continue};clients.add(client);try{pool.execute {serve(client)}}catch(_:RejectedExecutionException){clients.remove(client);client.close()}}}catch(e:Exception){if(live.get()){error="Telegram listener: ${e.javaClass.simpleName}";close()}}}
+        pool.execute {try{while(live.get()){val client=server.accept();if(!live.get()||clients.size>=32){client.close();continue};clients.add(client);try{pool.execute {serve(client)}}catch(_:RejectedExecutionException){clients.remove(client);client.close()}}}catch(e:Exception){if(live.get()){error="Telegram listener: ${e.javaClass.simpleName}";close()}}}
         timer.scheduleWithFixedDelay({for(ws in remotes)try{ws.ping()}catch(_:Exception){runCatching{ws.close()}}},25,25,TimeUnit.SECONDS)
     }
     private fun serve(client:Socket) {
         var remote:TgSocket?=null
         try {
-            client.tcpNoDelay=true;client.soTimeout=8000;val input=client.getInputStream();val hello=TgWire.exact(input,64);val info=TgWire.decode(hello,secret);client.soTimeout=0
+            client.tcpNoDelay=true;client.soTimeout=8000;val input=BufferedInputStream(client.getInputStream(),65536);val hello=TgWire.exact(input,64);val info=TgWire.decode(hello,secret);client.soTimeout=0
             val dc=kotlin.math.abs(info.dc);val relay=TgWire.relay(info.dc,info.protocol);val ws=dial(dc,info.dc<0);remote=ws
             if(!live.get())return
             remotes.add(ws);ws.send(relay);sessions.incrementAndGet();error=""
