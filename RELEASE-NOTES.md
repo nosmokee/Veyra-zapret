@@ -1,22 +1,11 @@
-# 1.1-beta.3 — correct CDN203 endpoint, diagnostic candidate
+# Veyra 1.1 Beta 2 — исправления Telegram
 
-- Android / Windows / Linux: DC203 uses its own MTProto TCP server, not the DC2 WSS alias. Signed DC IDs and existing local key/port retained.
-- Android: bounded Telegram diagnostic ring exported independently of native logcat; versionCode 11.
-- Windows: clean packet-boundary client EOF is not a proxy failure; truncated packets and upstream errors remain failures.
-- Linux: updated packages for x86_64/aarch64; native binaries unchanged per architecture.
-- Experimental prerelease: actual user-account media, physical Android, native Windows and ARM execution remain unverified. See TELEGRAM-FIX-REPORT.md.
+Обновлённый релиз Beta 2 для Android, Windows x64, Linux x86_64 и aarch64.
+- Быстрая гонка двух официальных маршрутов DC2/DC4 вместо ожидания медленного media-адреса.
+- Победитель используется один раз; проигравшие закрываются, пакеты не переигрываются.
+- Сохранены правильный CDN203, TLS-проверка и локальные порт/ключ.
+- Windows EXE совпадает с подтверждённым пользователем кандидатом.
+- Android versionCode 12 / 1.1-beta.2-fix.1; Linux 1.1-beta.2-fix.1.
+- Отдельная Beta 3 снята, её исправления включены сюда.
 
----
-
-# Veyra 1.1 Beta / 1.1-beta.1
-
-Beta release sources. See TEST-REPORT.md for test scope and limitations.
-- Android: Veyra label, amber/charcoal, advanced entry points hidden, GitHub footer, accessible licenses,
-  large-font Telegram action fixed; shared bypass + Telegram connect preserved. Original Next identity/signature.
-- Linux: shared SOCKS + Telegram + separate proxied browser start; stable private Telegram endpoint;
-  verified-TLS WSS bridge, pyaes fallback; amber responsive no-JavaScript local panel; Refresh/Ping actions.
-- Windows: version1.1-beta.1 and warm-amber default; tested existing engine/Telegram logic retained.
-  Windows Telegram still has a separate switch. No ChatGPT IP-change feature on any platform.
-
-Read README.md and TEST-REPORT.md before testing. Full platform app sources are supplied;
-Windows external native dependencies remain in the original engine archive with upstream source references.
+Полные результаты, начальный нестабильный DC5-тест и ограничения: TELEGRAM-FIX-REPORT.md.

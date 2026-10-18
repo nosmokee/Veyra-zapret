@@ -47,7 +47,41 @@ object TgWire {
         val base="kws$dc.web.telegram.org";val file="kws$dc-1.web.telegram.org"
         return if(media) listOf(file,base,alias) else listOf(base,file,alias)
     }
+    fun candidates(dc:Int,media:Boolean,cached:Pair<String,String>?=null):List<Pair<String,String>> {
+        val normal=hosts(dc,media).flatMap {h->addresses(dc,h).map {a->h to a}}
+        val main="kws$dc.web.telegram.org"
+        val preferred=if(dc==2||dc==4)listOf(main to "149.154.167.220",main to main) else emptyList()
+        return (preferred+listOfNotNull(cached)+normal).distinct()
+    }
     fun addresses(dc: Int,host: String) = if(dc==2 || dc==4) listOf(host,"149.154.167.220") else listOf(host)
+}
+
+/** Races at most a pair of connection attempts, not MTProto/user packets. */
+object TgDialRace {
+    fun first(attempts:List<((Closeable)->Unit)->TgSocket>,running:()->Boolean={true}):TgSocket {
+        val lock=Object();val tracked=attempts.map {mutableListOf<Closeable>()}
+        var winner:TgSocket?=null;var winnerIndex=-1;var done=false;var left=attempts.size;var last:Exception?=null
+        fun close(c:Closeable){try{c.close()}catch(_:Exception){}}
+        synchronized(lock) {
+            attempts.forEachIndexed {index,attempt->
+                Thread {
+                    var result:TgSocket?=null
+                    try {
+                        result=attempt {c->synchronized(lock){if(done&&winnerIndex!=index){close(c);throw IOException("Dial cancelled")};tracked[index].add(c);Unit}}
+                        synchronized(lock){if(!done&&running()){winner=result;winnerIndex=index;done=true;result=null};lock.notifyAll()}
+                    }catch(e:Exception){synchronized(lock){last=e}}
+                    finally{result?.let{close(it)};synchronized(lock){left--;if(winnerIndex!=index)tracked[index].forEach{close(it)};lock.notifyAll()}}
+                }.apply{isDaemon=true;name="Veyra-TgDial";start()}
+            }
+            while(!done&&left>0&&running())lock.wait(100)
+            if(!running())winnerIndex=-1
+            done=true
+            tracked.forEachIndexed {index,list->if(index!=winnerIndex)list.forEach{close(it)}}
+            if(winnerIndex>=0)return winner!!
+            winner?.let{close(it)}
+            throw IOException(if(running())"No WSS route connected" else "Stopped",last)
+        }
+    }
 }
 
 /** Provider-backed streaming CTR: one bulk operation, not one JCE call per 16 bytes. */
@@ -98,10 +132,10 @@ class TgTcpSocket private constructor(private val socket:Socket):TgSocket {
 class TgWebSocket private constructor(private val socket: Socket):TgSocket {
     private val input=BufferedInputStream(socket.getInputStream(),65536);private val output=socket.getOutputStream();private val writing=Any()
     companion object {
-        fun connect(host: String,address: String,proxyPort: Int?):TgSocket {
+        fun connect(host: String,address: String,proxyPort: Int?,track:(Closeable)->Unit={}):TgSocket {
             val raw=Socket()
             try {
-                raw.tcpNoDelay=true;raw.keepAlive=true;raw.soTimeout=7000
+                track(raw);raw.tcpNoDelay=true;raw.keepAlive=true;raw.soTimeout=7000
                 raw.connect(InetSocketAddress(if(proxyPort==null) address else "127.0.0.1",proxyPort ?: 443),5000)
                 if(proxyPort!=null) {
                     val o=raw.getOutputStream();val i=raw.getInputStream();o.write(byteArrayOf(5,1,0));check(TgWire.exact(i,2).contentEquals(byteArrayOf(5,0)))
@@ -110,7 +144,7 @@ class TgWebSocket private constructor(private val socket: Socket):TgSocket {
                     val n=when(reply[3].toInt()) {1->4;4->16;3->TgWire.exact(i,1)[0].toInt() and 255;else->error("SOCKS address")};TgWire.exact(i,n+2)
                 }
                 val tls=(SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(raw,host,443,true) as SSLSocket
-                var endpointChecked=false
+                track(tls);var endpointChecked=false
                 try {val params=tls.sslParameters;SSLParameters::class.java.getMethod("setEndpointIdentificationAlgorithm",String::class.java).invoke(params,"HTTPS");tls.sslParameters=params;endpointChecked=true} catch (_:NoSuchMethodException) { }
                 tls.startHandshake()
                 if(!endpointChecked) check(HttpsURLConnection.getDefaultHostnameVerifier().verify(host,tls.session)) { "TLS hostname mismatch" }

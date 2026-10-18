@@ -28,8 +28,8 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Veyra")]
 [assembly: TargetFramework(".NETFramework,Version=v4.8",FrameworkDisplayName=".NET Framework 4.8")]
 [assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.3")]
-[assembly: AssemblyInformationalVersion("1.1-beta.3")]
+[assembly: AssemblyFileVersion("1.1.0.4")]
+[assembly: AssemblyInformationalVersion("1.1-beta.2-route.1")]
 namespace ZapretDesk {
 [DataContract] public sealed class Settings {
  [DataMember] public string Profile="general.bat";
@@ -104,7 +104,7 @@ public sealed class Engine {
  public static async Task<List<Check>> ProbeTelegramWeb(CancellationToken cancel){var list=new List<Check>();string[] urls={"https://telegram.org/","https://desktop.telegram.org/"};for(int i=0;i<urls.Length;i++){cancel.ThrowIfCancellationRequested();var row=new Check{Name=i==0?"Telegram.org":"Скачать Telegram"};var clock=Stopwatch.StartNew();try{using(var handler=new HttpClientHandler{AllowAutoRedirect=true,AutomaticDecompression=DecompressionMethods.GZip|DecompressionMethods.Deflate})using(var client=new HttpClient(handler)){client.Timeout=TimeSpan.FromSeconds(7);client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/6.0 Veyra");using(var response=await client.GetAsync(urls[i],HttpCompletionOption.ResponseHeadersRead,cancel).ConfigureAwait(false)){row.Code=(int)response.StatusCode;row.Ok=row.Code>=200&&row.Code<400;}}}catch(OperationCanceledException){cancel.ThrowIfCancellationRequested();row.Error="Таймаут";}catch(Exception){row.Error="Нет HTTPS-ответа";}clock.Stop();row.Ms=clock.ElapsedMilliseconds;list.Add(row);}return list;}
  public static async Task<List<Check>> Probe(CancellationToken cancel){var list=new List<Check>();string[] names={"YouTube","Discord","Discord API","Google","GitHub","ChatGPT"};string[] urls={"https://www.youtube.com/","https://discord.com/","https://discord.com/api/v10/gateway","https://www.google.com/generate_204","https://github.com/","https://chatgpt.com/"};
   for(int i=0;i<urls.Length;i++){cancel.ThrowIfCancellationRequested();var row=new Check{Name=names[i]};var watch=Stopwatch.StartNew();try{
-    using(var handler=new HttpClientHandler{AllowAutoRedirect=true,AutomaticDecompression=DecompressionMethods.GZip|DecompressionMethods.Deflate})using(var client=new HttpClient(handler)){client.Timeout=TimeSpan.FromSeconds(5);client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 Veyra/1.1-beta.3");client.DefaultRequestHeaders.ConnectionClose=true;using(var response=await client.GetAsync(urls[i],HttpCompletionOption.ResponseHeadersRead,cancel).ConfigureAwait(false)){row.Code=(int)response.StatusCode;row.Ok=row.Code>=200&&row.Code<400;}}
+    using(var handler=new HttpClientHandler{AllowAutoRedirect=true,AutomaticDecompression=DecompressionMethods.GZip|DecompressionMethods.Deflate})using(var client=new HttpClient(handler)){client.Timeout=TimeSpan.FromSeconds(5);client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 Veyra/1.1-beta.2-route.1");client.DefaultRequestHeaders.ConnectionClose=true;using(var response=await client.GetAsync(urls[i],HttpCompletionOption.ResponseHeadersRead,cancel).ConfigureAwait(false)){row.Code=(int)response.StatusCode;row.Ok=row.Code>=200&&row.Code<400;}}
    }catch(OperationCanceledException){cancel.ThrowIfCancellationRequested();row.Error="Таймаут";}catch(Exception e){row.Error=e.Message;}watch.Stop();row.Ms=watch.ElapsedMilliseconds;list.Add(row);
   }return list;
  }

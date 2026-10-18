@@ -8,8 +8,8 @@ object TelegramLive {
    TelegramBridge(secret,{id,media->
     if(id==203) TgTcpSocket.connect203(args.firstOrNull()?.toInt()) else {
     var result:TgSocket?=null;var last:Exception?=null
-    routes@ for(host in TgWire.hosts(id,media))for(address in TgWire.addresses(id,host)) {
-     try{result=TgWebSocket.connect(host,address,args.firstOrNull()?.toInt());println("TLS verified: DC$id $host via $address");break@routes}catch(e:Exception){last=e}
+    routes@ for(pair in TgWire.candidates(id,media).chunked(2)) {
+     try{val attempts:List<((java.io.Closeable)->Unit)->TgSocket> = pair.map {(host,address)->{track->TgWebSocket.connect(host,address,args.firstOrNull()?.toInt(),track)}};result=TgDialRace.first(attempts);println("TLS verified: DC$id media=$media raced official routes");break@routes}catch(e:Exception){last=e}
     };result ?: throw java.io.IOException("No Telegram route",last)
     }
    },{println(it)}).use {bridge->

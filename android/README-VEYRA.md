@@ -1,10 +1,10 @@
 # Veyra 1.1 Beta — Android
 
-Бета-версия 1.1-beta.1, versionCode 9.
+Бета-версия 1.1-beta.2-fix.1, versionCode 12.
 
 ## Установка
 1. Останови старую Veyra и другой VPN. Не удаляй старую установку без необходимости.
-2. Установи Veyra-v1.1-beta.1-Android-universal.apk. Название приложения — Veyra.
+2. Установи Veyra-v1.1-beta.2-Android-universal.apk. Название приложения — Veyra.
    APK подписан прежним тестовым ключом Veyra Next 0.2.0/0.2.1 и может обновить эту установку.
    Отдельная историческая Veyra Test (.unifiedtest) не обновляется этим APK и может остаться рядом.
    Не запускай обе копии одновременно. Не очищай данные: там сохранён ключ локального прокси.
@@ -41,3 +41,6 @@ JDK17, Android SDK34, Gradle wrapper. Для сохранённых JNI:
 GPLv3 / upstream attribution: LICENSE и PROVENANCE.md; прежние инструкции — только HISTORY.
 
 GitHub: https://github.com/nosmokee/Veyra-zapret
+
+## Telegram route hotfix
+Same pair-race route selection as the user-confirmed Windows candidate. 79 Gradle tests, 24 Kotlin protocol tests and 36 live nonce checks pass; physical Android media/VPN not tested here. See ../TELEGRAM-FIX-REPORT.md.

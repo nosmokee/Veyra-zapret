@@ -7,6 +7,13 @@ import java.util.concurrent.*
 
 /** No accounts. Synthetic media bytes are not a real Telegram video download. */
 class TelegramRegressionTest {
+ private class DialSocket:TgSocket { @Volatile var closed=false;override fun send(data:ByteArray){};override fun receive():ByteArray?=null;override fun close(){closed=true} }
+ @Test fun routePriorityAndMediaCache(){for(dc in listOf(2,4))for(media in listOf(false,true)){val stale="kws$dc-1.web.telegram.org" to "149.154.167.220";val c=TgWire.candidates(dc,media,stale);val main="kws$dc.web.telegram.org";assertEquals(listOf(main to "149.154.167.220",main to main),c.take(2));assertTrue(c.contains(stale));assertEquals(c.size,c.distinct().size)};assertEquals("kws3-1.web.telegram.org",TgWire.candidates(3,true)[0].first);try{TgWire.candidates(203,true);fail()}catch(_:IllegalArgumentException){}}
+ @Test fun fastDialWinsAndLateLoserClosed(){val release=CountDownLatch(1);val late=DialSocket();val win=DialSocket();val clock=System.nanoTime();val result=TgDialRace.first(listOf({_->release.await(2,TimeUnit.SECONDS);late},{_->win}));assertSame(win,result);assertFalse(win.closed);assertTrue(System.nanoTime()-clock<500_000_000);release.countDown();repeat(100){if(!late.closed)Thread.sleep(10)};assertTrue(late.closed)}
+ @Test fun inflightDialClosedOnWin(){val ready=CountDownLatch(1);val release=CountDownLatch(1);val raw=DialSocket();val win=DialSocket();assertSame(win,TgDialRace.first(listOf({track->track(raw);ready.countDown();release.await(2,TimeUnit.SECONDS);DialSocket()},{_->ready.await(1,TimeUnit.SECONDS);win})));assertTrue(raw.closed);release.countDown()}
+ @Test fun dialFailureDoesNotCancelWinner(){val win=DialSocket();assertSame(win,TgDialRace.first(listOf({_->throw IOException("synthetic")},{_->win})));assertFalse(win.closed)}
+ @Test fun allDialsFail(){try{TgDialRace.first(listOf({_->throw IOException("a")},{_->throw IOException("b")}));fail()}catch(_:IOException){}}
+ @Test fun stoppedDialClosesResources(){val running=java.util.concurrent.atomic.AtomicBoolean(true);val raw=DialSocket();try{TgDialRace.first(listOf({track->track(raw);running.set(false);DialSocket()})){running.get()};fail()}catch(_:IOException){};assertTrue(raw.closed)}
  private class Echo:TgSocket {
   var read:TgCtr?=null;var write:TgCtr?=null
   val q=LinkedBlockingQueue<ByteArray>();@Volatile var closed=false

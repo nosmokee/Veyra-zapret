@@ -23,10 +23,24 @@ object TelegramRuntime {
             } else {
             val started=System.nanoTime();var last:Exception?=null;var result:TgSocket?=null
             val routeKey="$dc:$media"
-            val candidates=(listOfNotNull(routes[routeKey])+TgWire.hosts(dc,media).flatMap {h->TgWire.addresses(dc,h).map {a->h to a}}).distinct()
-            routes@ for((host,address) in candidates) {
+            val candidates=TgWire.candidates(dc,media,routes[routeKey])
+            routes@ for(pair in candidates.chunked(2)) {
                 if(bridge?.running!=true || (System.nanoTime()-started)>25_000_000_000L)break@routes
-                try {TgDiagnostics.record("WSS dc=$dc media=$media host=$host address=$address TLS=verified");Log.i("VeyraTelegram","WSS host=$host address=$address TLS=verified via local SOCKS");result=TgWebSocket.connect(host,address,port);routes[routeKey]=host to address;break@routes} catch(e:Exception) {last=e;routes.remove(routeKey,host to address);TgDiagnostics.record("WSS failed dc=$dc host=$host ${TgDiagnostics.describe(e)}");Log.w("VeyraTelegram","WSS failed: ${TgDiagnostics.describe(e)}")}
+                val selected=java.util.concurrent.ConcurrentHashMap<TgSocket,Pair<String,String>>()
+                val attempts:List<((java.io.Closeable)->Unit)->TgSocket> = pair.map {(host,address)->
+                    {track->
+                        val clock=System.nanoTime()
+                        TgDiagnostics.record("WSS attempt dc=$dc media=$media host=$host address=$address")
+                        try {
+                            val socket=TgWebSocket.connect(host,address,port,track)
+                            selected[socket]=host to address
+                            TgDiagnostics.record("WSS connected TLS=verified dc=$dc host=$host address=$address elapsed-ms=${(System.nanoTime()-clock)/1_000_000}")
+                            socket
+                        }catch(e:Exception){TgDiagnostics.record("WSS failed dc=$dc host=$host address=$address elapsed-ms=${(System.nanoTime()-clock)/1_000_000} ${TgDiagnostics.describe(e)}");throw e}
+                    }
+                }
+                try {val socket=TgDialRace.first(attempts){bridge?.running==true};result=socket;selected[socket]?.let{routes[routeKey]=it};break@routes}
+                catch(e:Exception){last=e;routes.remove(routeKey);Log.w("VeyraTelegram","WSS pair failed: ${TgDiagnostics.describe(e)}")}
             }
             result ?: throw java.io.IOException("Official Telegram WSS unavailable",last)
             }

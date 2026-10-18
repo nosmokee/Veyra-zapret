@@ -17,8 +17,8 @@ android {
             "Veyra Test" else "@string/app_name"
         minSdk = 21
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.1-beta.3"
+        versionCode = 12
+        versionName = "1.1-beta.2-fix.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

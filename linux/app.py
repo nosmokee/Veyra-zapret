@@ -3,7 +3,7 @@
 import argparse, atexit, concurrent.futures, fcntl, http.server, json, os, pathlib
 import secrets, shutil, signal, socket, ssl, subprocess, threading, time, webbrowser
 import html, platform, struct, urllib.parse
-VERSION = "1.1-beta.3"
+VERSION = "1.1-beta.2-fix.1"
 from telegram_bridge import Bridge, WebSocket
 BASE = pathlib.Path(__file__).resolve().parent
 PROFILES = {'youtube': ('Veyra Base · SNI / TCP', ['--timeout','3','--disorder','1+s','--auto=torst','--split','1+s','--tlsrec','3+s']),

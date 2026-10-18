@@ -28,6 +28,53 @@ def hosts(dc,media=False):
     a=f'kws{dc}.web.telegram.org';b=f'kws{dc}-1.web.telegram.org'
     return ([b,a] if media else [a,b])+[['','pluto','venus','aurora','vesta','flora'][dc]+'.web.telegram.org']
 
+def candidates(dc,media=False,cached=None):
+    normal=[(h,a) for h in hosts(dc,media) for a in ([h,'149.154.167.220'] if dc in (2,4) else [h])]
+    main=f'kws{dc}.web.telegram.org'
+    preferred=[(main,'149.154.167.220'),(main,main)] if dc in (2,4) else []
+    return list(dict.fromkeys(preferred+([cached] if cached else [])+normal))
+
+def first_connected(attempts,stopped=lambda:False):
+    """Race connection setup ONLY; close in-flight/late losers. No packet replay."""
+    condition=threading.Condition();tracked=[[] for _ in attempts]
+    state={'done':False,'winner':None,'index':-1,'left':len(attempts),'error':None}
+    def close(obj):
+        try:obj.close()
+        except Exception:pass
+    def worker(index,attempt):
+        def track(obj):
+            with condition:
+                if state['done'] and state['index']!=index:
+                    close(obj);raise OSError('Dial cancelled')
+                tracked[index].append(obj)
+        result=None
+        try:
+            result=attempt(track)
+            with condition:
+                if not state['done'] and not stopped():
+                    state.update(done=True,winner=result,index=index);result=None
+                condition.notify_all()
+        except Exception as error:
+            with condition:state['error']=error
+        finally:
+            if result is not None:close(result)
+            with condition:
+                state['left']-=1
+                if state['index']!=index:
+                    for obj in tracked[index]:close(obj)
+                condition.notify_all()
+    with condition:
+        for index,attempt in enumerate(attempts):threading.Thread(target=worker,args=(index,attempt),daemon=True).start()
+        while not state['done'] and state['left'] and not stopped():condition.wait(.1)
+        if stopped():state['index']=-1
+        state['done']=True
+        for index,objects in enumerate(tracked):
+            if index!=state['index']:
+                for obj in objects:close(obj)
+        if state['winner'] is not None and state['index']>=0:return state['winner']
+        if state['winner'] is not None:close(state['winner'])
+        raise OSError('Stopped' if stopped() else 'No WSS route connected') from state['error']
+
 def decode(h,secret):
     if len(h)!=64 or len(secret)!=16: raise ValueError('Hello')
     p=Ctr(hashlib.sha256(h[8:40]+secret).digest(),h[40:56]).apply(h)
@@ -47,9 +94,10 @@ class WebSocket:
     def __init__(self,s):self.s=s;self.write_lock=threading.Lock()
     @classmethod
     def connect(cls,host,address,connector=None,track=lambda s:None):
-        raw=connector(address,443) if connector else socket.create_connection((address,443),timeout=6)
-        track(raw)
+        raw=connector(address,443) if connector else socket.socket()
         try:
+            track(raw)
+            if not connector:raw.settimeout(6);raw.connect((address,443))
             raw.settimeout(7);raw.setsockopt(socket.IPPROTO_TCP,socket.TCP_NODELAY,1)
             s=ssl.create_default_context().wrap_socket(raw,server_hostname=host);track(s)
             key=base64.b64encode(os.urandom(16)).decode()
@@ -156,16 +204,23 @@ class Bridge:
     def dial(self,dc,media):
         if dc==203:return TcpTransport.connect203(self.connector,self.track)
         key=(dc,media)
-        candidates=[(host,address) for host in hosts(dc,media) for address in ([host,'149.154.167.220'] if dc in (2,4,203) else [host])]
         with self.lock:cached=self.routes.get(key)
-        if cached:candidates.insert(0,cached)
-        for host,address in dict.fromkeys(candidates):
+        choices=candidates(dc,media,cached)
+        for offset in range(0,len(choices),2):
             if not self.live:raise OSError('Stopped')
+            selected={};attempts=[]
+            for host,address in choices[offset:offset+2]:
+                def attempt(track,host=host,address=address):
+                    def tracked(obj):self.track(obj);track(obj)
+                    ws=WebSocket.connect(host,address,self.connector,tracked)
+                    selected[ws]=(host,address);return ws
+                attempts.append(attempt)
             try:
-                ws=WebSocket.connect(host,address,self.connector,self.track)
-                with self.lock:self.routes[key]=(host,address)
+                ws=first_connected(attempts,lambda:not self.live)
+                with self.lock:self.routes[key]=selected[ws]
                 return ws
-            except (OSError,ValueError):pass
+            except (OSError,ValueError):
+                with self.lock:self.routes.pop(key,None)
         raise OSError('Official Telegram WSS unavailable')
     def serve(self,c):
         ws=None

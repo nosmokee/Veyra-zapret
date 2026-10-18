@@ -1,4 +1,4 @@
-Veyra 1.1-beta.3 — source build
+Veyra 1.1-beta.2-route.1 — source build
 Windows Visual Studio2022 Build Tools + .NET Framework4.8 targeting/WPF pack.
 From source: msbuild ZapretDesk.csproj /p:Configuration=Release
 Output: bin\Release\Veyra.exe and Veyra.exe.config (keep together).
@@ -8,3 +8,5 @@ Tests: powershell -File tests\Run-BridgeTests.ps1 (loopback only).
 LiveBridge48.cs is an explicit account-free online protocol test, not a startup action.
 This packaged EXE was compiled on Linux using Roslyn and .NET4.8 reference assemblies.
 No native Windows/WPF/WinDivert end-to-end test was performed here.
+
+Published EXE preserved byte-for-byte from the user-confirmed route.1 candidate; source tests executed on Linux/.NET. User separately confirmed native Windows operation.
