@@ -1,0 +1,34 @@
+[
+  {
+    "path": "arm64-v8a/libhev-socks5-tunnel.so",
+    "sha256": "5397a175d46506c36d294171234fd5d736e38a7f95130bd735be684716d9701b"
+  },
+  {
+    "path": "armeabi-v7a/libhev-socks5-tunnel.so",
+    "sha256": "20fa23e62e9487212576c7312ef7af10d6ecb4d2a40cbda6ae21cd0e8bea7be4"
+  },
+  {
+    "path": "x86/libhev-socks5-tunnel.so",
+    "sha256": "59cb5dd8ff9f48603572100b1a126024f214bebd27a012c727a8d7d4e7730a91"
+  },
+  {
+    "path": "x86_64/libhev-socks5-tunnel.so",
+    "sha256": "3ead8020a06bbc998d197fffa55412a8eab9e431ab97c352635c26f8b29435ce"
+  },
+  {
+    "path": "arm64-v8a/libbyedpi.so",
+    "sha256": "26808190265623d7fa0acc9956334571af1c5779e4c387e49259de01f775a6d1"
+  },
+  {
+    "path": "armeabi-v7a/libbyedpi.so",
+    "sha256": "ac1adabbcf1bca7f617871b00c92c5f3f64017b8b62bd79797790a6705552b59"
+  },
+  {
+    "path": "x86/libbyedpi.so",
+    "sha256": "ae3a12cf9d750b63ed992221826c0c189ad5d8988ece1f2da8586157b5b95f01"
+  },
+  {
+    "path": "x86_64/libbyedpi.so",
+    "sha256": "89c0b52175db36a498e9b3608e2e8d12f53deb17e55baf117dec38cd3a41b295"
+  }
+]
