@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+telegram-key.dpapi
+telegram-diagnostic.txt
+app.log
+settings.json
+appearance.json
+consent.json
+last-test.txt

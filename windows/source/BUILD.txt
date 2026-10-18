@@ -1,0 +1,16 @@
+Veyra 1.1-beta.1 — source build
+Windows Visual Studio2022 Build Tools + .NET Framework4.8 targeting/WPF pack.
+From source: msbuild ZapretDesk.csproj /p:Configuration=Release
+Output: bin\Release\Veyra.exe and Veyra.exe.config (keep together).
+C#7.3, x64, no external NuGet runtime packages.
+engine.zip is the unchanged supplied Flowseal1.10.3 archive; third-party source links in notices.
+Tests: powershell -File tests\Run-BridgeTests.ps1 (loopback only).
+LiveBridge48.cs is an explicit account-free online protocol test, not a startup action.
+This packaged EXE was compiled on Linux using Roslyn and .NET4.8 reference assemblies.
+No native Windows/WPF/WinDivert end-to-end test was performed here.
+
+The repository does NOT include engine.zip: third-party Windows native redistribution review is pending.
+To build locally, obtain the matching engine bundle from its upstream distribution, verify its licenses
+and place it at source/engine.zip. Expected SHA256 of the originally supplied archive:
+244314ae1c24538a0d751601da8e0c925c843371eec4456eb15f14c4fd6b7058.
+A different archive is not the tested dependency. Do not invent or bypass missing dependencies.

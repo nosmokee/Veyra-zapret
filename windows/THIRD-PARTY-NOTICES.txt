@@ -1,0 +1,33 @@
+THIRD-PARTY COMPONENTS / RELEASE CANDIDATE INVENTORY
+
+Veyra is an independent GUI. It does not claim authorship of winws,
+WinDivert, Cygwin or the Flowseal distribution.
+
+The original supplied engine.zip is embedded unchanged:
+SHA256 244314ae1c24538a0d751601da8e0c925c843371eec4456eb15f14c4fd6b7058
+Flowseal zapret-discord-youtube 1.10.3:
+https://github.com/Flowseal/zapret-discord-youtube/tree/1.10.3
+Upstream MIT notice: licenses/Flowseal-LICENSE.txt
+The supplied engine archive had no license files; the notice was
+retrieved from the matching upstream tag, not invented by this GUI.
+
+Original networking project / source:
+https://github.com/bol-van/zapret
+Windows distribution / source and dependencies:
+https://github.com/bol-van/zapret-win-bundle
+WinDivert DLL and driver / source and licensing:
+https://github.com/basil00/WinDivert
+Upstream notice: licenses/WinDivert-LICENSE.txt
+Cygwin runtime (cygwin1.dll), source and licensing:
+https://cygwin.com/licensing.html
+https://cygwin.com/git/newlib-cygwin.git
+
+Licenses apply per component; Flowseal's MIT notice is not a blanket
+license for all bundled DLLs and drivers. Prior to public stable
+redistribution verify the exact bundled dependencies' versions,
+matching notices and any corresponding-source obligations.
+No new license for the author's own GUI is assigned by this packaging.
+This is a release candidate, not a certification of legal compliance.
+
+PUBLIC SOURCE REPOSITORY: engine.zip is deliberately excluded while native dependency review is pending.
+No new Windows runtime asset is published with this source update.
