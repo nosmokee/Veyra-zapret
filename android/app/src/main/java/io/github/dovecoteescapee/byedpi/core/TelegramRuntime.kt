@@ -17,14 +17,19 @@ object TelegramRuntime {
         val saved=prefs.getString("secret",null)
         val secret=if(saved==null) TgWire.random(16).also {check(prefs.edit().putString("secret",Base64.encodeToString(it,Base64.NO_WRAP)).commit())} else Base64.decode(saved,Base64.NO_WRAP).also {require(it.size==16)}
         val instance=TelegramBridge(secret,{dc,media->
+            if(dc==203) {
+                TgDiagnostics.record("CONNECT dc=203 transport=MTProto-TCP endpoint=${TgTcpSocket.CDN203}:443 via=local-SOCKS")
+                TgTcpSocket.connect203(port)
+            } else {
             val started=System.nanoTime();var last:Exception?=null;var result:TgSocket?=null
             val routeKey="$dc:$media"
             val candidates=(listOfNotNull(routes[routeKey])+TgWire.hosts(dc,media).flatMap {h->TgWire.addresses(dc,h).map {a->h to a}}).distinct()
             routes@ for((host,address) in candidates) {
                 if(bridge?.running!=true || (System.nanoTime()-started)>25_000_000_000L)break@routes
-                try {Log.i("VeyraTelegram","WSS host=$host address=$address TLS=verified via local SOCKS");result=TgWebSocket.connect(host,address,port);routes[routeKey]=host to address;break@routes} catch(e:Exception) {last=e;routes.remove(routeKey,host to address);Log.w("VeyraTelegram","WSS failed: ${e.javaClass.simpleName}")}
+                try {TgDiagnostics.record("WSS dc=$dc media=$media host=$host address=$address TLS=verified");Log.i("VeyraTelegram","WSS host=$host address=$address TLS=verified via local SOCKS");result=TgWebSocket.connect(host,address,port);routes[routeKey]=host to address;break@routes} catch(e:Exception) {last=e;routes.remove(routeKey,host to address);TgDiagnostics.record("WSS failed dc=$dc host=$host ${TgDiagnostics.describe(e)}");Log.w("VeyraTelegram","WSS failed: ${TgDiagnostics.describe(e)}")}
             }
             result ?: throw java.io.IOException("Official Telegram WSS unavailable",last)
+            }
         },{text->Log.w("VeyraTelegram",text)})
         try {
             owner=service;bridge=instance

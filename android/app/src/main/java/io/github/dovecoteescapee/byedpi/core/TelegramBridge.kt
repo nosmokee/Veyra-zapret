@@ -10,7 +10,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import javax.net.ssl.*
 
-/** Local MTProxy, official Telegram TLS/WSS only. No account/password or relay pool. */
+/** Local MTProxy. Official TLS/WSS; CDN203 uses its own MTProto TCP endpoint. */
 object TgWire {
     const val MAX = 8 * 1024 * 1024
     val random = SecureRandom()
@@ -41,7 +41,7 @@ object TgWire {
         encrypted.copyInto(h,56,56,64);return h
     }
     fun hosts(id: Int, media: Boolean): List<String> {
-        val dc=if(id==203) 2 else id
+        val dc=id
         require(dc in 1..5)
         val alias=listOf("","pluto","venus","aurora","vesta","flora")[dc]+".web.telegram.org"
         val base="kws$dc.web.telegram.org";val file="kws$dc-1.web.telegram.org"
@@ -59,6 +59,41 @@ class TgCtr(key: ByteArray, iv: ByteArray) {
     fun apply(input: ByteArray): ByteArray = if(input.isEmpty()) byteArrayOf() else cipher.update(input)
 }
 interface TgSocket:Closeable { fun send(data: ByteArray);fun receive(): ByteArray?;fun ping() {} }
+
+/** Bounded, payload/key-free Telegram events, independent of noisy native logcat. */
+object TgDiagnostics {
+    private val events=java.util.ArrayDeque<String>()
+    @Synchronized fun record(text:String) {while(events.size>=256)events.removeFirst();events.addLast("${System.currentTimeMillis()} $text")}
+    @Synchronized fun snapshot():String = events.joinToString("\n").ifEmpty {"Telegram events: none in this process"}
+    fun describe(error:Throwable):String {val parts=mutableListOf<String>();var e:Throwable?=error;repeat(6){val current=e ?: return parts.joinToString(" <- ");parts+=current.javaClass.simpleName;e=current.cause};return parts.joinToString(" <- ")}
+}
+
+/** Raw obfuscated MTProto is end-to-end authenticated by Telegram, NOT TLS/WSS.
+ * Never route CDN203 to DC2: a successful resPQ alone cannot establish DC identity. */
+class TgTcpSocket private constructor(private val socket:Socket):TgSocket {
+    private val input=socket.getInputStream();private val output=socket.getOutputStream()
+    companion object {
+        const val CDN203="91.105.192.100"
+        fun connect203(proxyPort:Int?):TgSocket = connect(CDN203,443,proxyPort)
+        internal fun connect(address:String,port:Int,proxyPort:Int?):TgSocket {
+            val raw=Socket()
+            try {
+                raw.tcpNoDelay=true;raw.keepAlive=true;raw.soTimeout=7000
+                raw.connect(InetSocketAddress(if(proxyPort==null)address else "127.0.0.1",proxyPort ?: port),5000)
+                if(proxyPort!=null) {
+                    val o=raw.getOutputStream();val i=raw.getInputStream();o.write(byteArrayOf(5,1,0));check(TgWire.exact(i,2).contentEquals(byteArrayOf(5,0)))
+                    val name=address.toByteArray(Charsets.US_ASCII);o.write(byteArrayOf(5,1,0,3,name.size.toByte())+name+byteArrayOf((port ushr 8).toByte(),port.toByte()))
+                    val reply=TgWire.exact(i,4);check(reply[0]==5.toByte()&&reply[1]==0.toByte()) {"SOCKS CONNECT failed"}
+                    val n=when(reply[3].toInt()){1->4;4->16;3->TgWire.exact(i,1)[0].toInt() and 255;else->error("SOCKS address")};TgWire.exact(i,n+2)
+                }
+                raw.soTimeout=0;return TgTcpSocket(raw)
+            }catch(e:Exception){raw.close();throw e}
+        }
+    }
+    override fun send(data:ByteArray){output.write(data);output.flush()}
+    override fun receive():ByteArray? {val b=ByteArray(65536);val n=input.read(b);return if(n<0)null else b.copyOf(n)}
+    override fun close(){socket.close()}
+}
 
 class TgWebSocket private constructor(private val socket: Socket):TgSocket {
     private val input=BufferedInputStream(socket.getInputStream(),65536);private val output=socket.getOutputStream();private val writing=Any()
@@ -151,23 +186,25 @@ class TelegramBridge(private val secret: ByteArray,private val dial:(Int,Boolean
         timer.scheduleWithFixedDelay({for(ws in remotes)try{ws.ping()}catch(_:Exception){runCatching{ws.close()}}},25,25,TimeUnit.SECONDS)
     }
     private fun serve(client:Socket) {
-        var remote:TgSocket?=null
+        var remote:TgSocket?=null;var sessionDc=0;var phase="hello"
+        val started=System.nanoTime()
         try {
             client.tcpNoDelay=true;client.soTimeout=8000;val input=BufferedInputStream(client.getInputStream(),65536);val hello=TgWire.exact(input,64);val info=TgWire.decode(hello,secret);client.soTimeout=0
+            sessionDc=info.dc;TgDiagnostics.record("CLIENT dc=${info.dc} protocol=${info.protocol.toUInt().toString(16)}");phase="connect"
             val dc=kotlin.math.abs(info.dc);val relay=TgWire.relay(info.dc,info.protocol);val ws=dial(dc,info.dc<0);remote=ws
             if(!live.get())return
-            remotes.add(ws);ws.send(relay);sessions.incrementAndGet();error=""
+            remotes.add(ws);ws.send(relay);sessions.incrementAndGet();error="";phase="upload";TgDiagnostics.record("CONNECTED dc=$sessionDc elapsedMs=${(System.nanoTime()-started)/1_000_000}")
             val cr=TgCtr(TgWire.hash(hello.copyOfRange(8,40),secret),hello.copyOfRange(40,56));cr.apply(ByteArray(64))
             val reverse=hello.copyOfRange(8,56).reversedArray();val cw=TgCtr(TgWire.hash(reverse.copyOfRange(0,32),secret),reverse.copyOfRange(32,48))
             val rw=TgCtr(relay.copyOfRange(8,40),relay.copyOfRange(40,56));rw.apply(ByteArray(64))
             val rev=relay.copyOfRange(8,56).reversedArray();val rr=TgCtr(rev.copyOfRange(0,32),rev.copyOfRange(32,48))
-            pool.execute {try{while(live.get()){val b=ws.receive() ?: break;val encoded=cw.apply(rr.apply(b));client.getOutputStream().write(encoded);down.addAndGet(b.size.toLong())}}catch(e:Exception){if(live.get()&&!client.isClosed){error="Telegram receive: ${e.javaClass.simpleName}";report(error)}}finally{runCatching{client.close()};runCatching{ws.close()}}}
+            pool.execute {try{while(live.get()){val b=ws.receive() ?: break;val encoded=cw.apply(rr.apply(b));client.getOutputStream().write(encoded);down.addAndGet(b.size.toLong())}}catch(e:Exception){if(live.get()&&!client.isClosed){error="Telegram receive dc=$sessionDc: ${TgDiagnostics.describe(e)}";TgDiagnostics.record(error);report(error)}}finally{runCatching{client.close()};runCatching{ws.close()}}}
             while(live.get()) {
                 var head=cr.apply(TgWire.exact(input,if(info.protocol==0xefefefef.toInt())1 else 4))
                 val n=if(info.protocol==0xefefefef.toInt()) {val first=head[0].toInt() and 255;if(first==127||first==255){val tail=cr.apply(TgWire.exact(input,3));head+=tail;((tail[0].toInt() and 255) or ((tail[1].toInt() and 255) shl 8) or ((tail[2].toInt() and 255) shl 16))*4}else(first and 127)*4} else TgWire.le(head) and 0x7fffffff
                 check(n in 1..TgWire.MAX);val b=head+cr.apply(TgWire.exact(input,n));ws.send(rw.apply(b));up.addAndGet(b.size.toLong())
             }
-        }catch(e:Exception){if(live.get()&&!client.isClosed && e !is EOFException){error="Telegram: ${e.javaClass.simpleName}";report(error)}}finally{clients.remove(client);runCatching{client.close()};remote?.let {remotes.remove(it);runCatching{it.close()}}}
+        }catch(e:Exception){if(live.get()&&!client.isClosed && e !is EOFException){error="Telegram dc=$sessionDc phase=$phase: ${TgDiagnostics.describe(e)}";TgDiagnostics.record(error);report(error)}}finally{TgDiagnostics.record("END dc=$sessionDc phase=$phase elapsedMs=${(System.nanoTime()-started)/1_000_000}");clients.remove(client);runCatching{client.close()};remote?.let {remotes.remove(it);runCatching{it.close()}}}
     }
     @Synchronized override fun close() {
         live.set(false);runCatching{listener?.close()};listener=null

@@ -1,6 +1,8 @@
+Beta 3: DC203 now uses its own MTProto TCP endpoint, not DC2 WSS. Clean client EOF is not a proxy error. Preserve application data/key/port; real account media playback is NOT confirmed here. See TELEGRAM-FIX-REPORT.md.
+
 Telegram fix beta.2: persistent local port, 64 sessions, bulk WebSocket masking. Stop old copies first. Re-add the active proxy in Telegram once if old settings remain. Detailed checks and limits: TELEGRAM-FIX-REPORT.md.
 
-Veyra 1.1 Beta — Windows x64 (1.1-beta.2)
+Veyra 1.1 Beta — Windows x64 (1.1-beta.3)
 
 Распакуй архив целиком. Требуются Windows x64 и .NET Framework4.8.
 Запусти Veyra.exe. Для winws/WinDivert требуется подтверждение прав администратора.

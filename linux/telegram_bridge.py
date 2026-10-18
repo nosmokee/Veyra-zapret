@@ -1,4 +1,4 @@
-"""Local MTProxy -> authenticated official Telegram WSS. MIT; no account secrets."""
+"""Local MTProxy -> official TLS/WSS or dedicated CDN203 MTProto TCP. MIT."""
 import base64, hashlib, os, socket, ssl, struct, threading, time
 MAX = 8*1024*1024
 
@@ -32,7 +32,7 @@ def decode(h,secret):
     if len(h)!=64 or len(secret)!=16: raise ValueError('Hello')
     p=Ctr(hashlib.sha256(h[8:40]+secret).digest(),h[40:56]).apply(h)
     dc=struct.unpack_from('<h',p,60)[0];proto=struct.unpack_from('<I',p,56)[0]
-    if abs(dc) not in range(1,6) or proto not in (0xeeeeeeee,0xdddddddd,0xefefefef): raise ValueError('DC/protocol')
+    if (abs(dc) not in range(1,6) and abs(dc)!=203) or proto not in (0xeeeeeeee,0xdddddddd,0xefefefef): raise ValueError('DC/protocol')
     return dc,proto
 
 def relay(dc,proto):
@@ -100,10 +100,26 @@ class WebSocket:
         except OSError:pass
         self.s.close()
 
+class TcpTransport:
+    CDN203='91.105.192.100'
+    def __init__(self,s):self.s=s
+    @classmethod
+    def connect203(cls,connector=None,track=lambda s:None):
+        s=connector(cls.CDN203,443) if connector else socket.create_connection((cls.CDN203,443),timeout=6)
+        try:track(s);s.settimeout(None);s.setsockopt(socket.IPPROTO_TCP,socket.TCP_NODELAY,1);s.setsockopt(socket.SOL_SOCKET,socket.SO_KEEPALIVE,1);return cls(s)
+        except BaseException:s.close();raise
+    def send(self,data):self.s.sendall(data)
+    def receive(self):return self.s.recv(65536) or None
+    def frame(self,op,data=b''):pass # TCP keepalive is not a WebSocket ping.
+    def close(self):
+        try:self.s.shutdown(socket.SHUT_RDWR)
+        except OSError:pass
+        self.s.close()
+
 class Bridge:
     def __init__(self,secret,connector=None):
         if len(secret)!=16:raise ValueError('Secret')
-        self.secret=secret;self.connector=connector;self.lock=threading.RLock();self.sockets=set();self.clients=set();self.remotes=set();self.live=False;self.port=0;self.up=0;self.down=0;self.sessions=0;self.error='';self.workers=set();self.stopping=threading.Event()
+        self.secret=secret;self.connector=connector;self.lock=threading.RLock();self.sockets=set();self.clients=set();self.remotes=set();self.live=False;self.port=0;self.up=0;self.down=0;self.sessions=0;self.error='';self.workers=set();self.stopping=threading.Event();self.routes={}
     def track(self,s):
         with self.lock:
             if not self.live:s.close();raise OSError('Bridge stopped')
@@ -119,7 +135,7 @@ class Bridge:
     def start(self,port=0):
         if self.live:raise RuntimeError('Already started')
         s=socket.socket();s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        try:s.bind(('127.0.0.1',port));s.listen(16);s.settimeout(.3)
+        try:s.bind(('127.0.0.1',port));s.listen(64);s.settimeout(.3)
         except BaseException:s.close();raise
         self.listener=s;self.port=s.getsockname()[1];self.live=True;self.track(s);self.spawn(self.accept);self.spawn(self.heartbeat)
     def accept(self):
@@ -128,7 +144,7 @@ class Bridge:
             except socket.timeout:continue
             except OSError:break
             with self.lock:
-                if not self.live or len(self.clients)>=16:c.close();continue
+                if not self.live or len(self.clients)>=64:c.close();continue
                 self.clients.add(c)
             self.track(c);self.spawn(self.serve,c)
     def heartbeat(self):
@@ -138,11 +154,18 @@ class Bridge:
                 try:ws.frame(9)
                 except OSError:ws.close()
     def dial(self,dc,media):
-        for host in hosts(dc,media):
-            for address in (['149.154.167.220',host] if dc in (2,4) else [host]):
-                if not self.live:raise OSError('Stopped')
-                try:return WebSocket.connect(host,address,self.connector,self.track)
-                except (OSError,ValueError):pass
+        if dc==203:return TcpTransport.connect203(self.connector,self.track)
+        key=(dc,media)
+        candidates=[(host,address) for host in hosts(dc,media) for address in ([host,'149.154.167.220'] if dc in (2,4,203) else [host])]
+        with self.lock:cached=self.routes.get(key)
+        if cached:candidates.insert(0,cached)
+        for host,address in dict.fromkeys(candidates):
+            if not self.live:raise OSError('Stopped')
+            try:
+                ws=WebSocket.connect(host,address,self.connector,self.track)
+                with self.lock:self.routes[key]=(host,address)
+                return ws
+            except (OSError,ValueError):pass
         raise OSError('Official Telegram WSS unavailable')
     def serve(self,c):
         ws=None

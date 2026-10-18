@@ -1,10 +1,10 @@
-# 1.1-beta.2 — Telegram stability (Android / Windows)
+# 1.1-beta.3 — correct CDN203 endpoint, diagnostic candidate
 
-- Android: signed DC203, 32 сессии, bulk AES-CTR / буферизация.
-- Windows: 64 сессии, bulk WS frames, постоянный Telegram-порт.
-- Обе платформы: приоритет официального DNS, кэш успешного TLS/WSS маршрута без изменения проверки TLS.
-- Подробности проверок, обновления и ограничений: TELEGRAM-FIX-REPORT.md.
-- Linux не менялся. Видеозагрузка из аккаунта, физический Android VPN и нативный Windows здесь не проверены.
+- Android / Windows / Linux: DC203 uses its own MTProto TCP server, not the DC2 WSS alias. Signed DC IDs and existing local key/port retained.
+- Android: bounded Telegram diagnostic ring exported independently of native logcat; versionCode 11.
+- Windows: clean packet-boundary client EOF is not a proxy failure; truncated packets and upstream errors remain failures.
+- Linux: updated packages for x86_64/aarch64; native binaries unchanged per architecture.
+- Experimental prerelease: actual user-account media, physical Android, native Windows and ARM execution remain unverified. See TELEGRAM-FIX-REPORT.md.
 
 ---
 

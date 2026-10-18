@@ -19,7 +19,7 @@ def one(c,dc,proto):
  return f'PASS dc={dc} proto={proto:x} resPQ nonce matched'
 if __name__=='__main__':
  failures=0
- for profile,items in [('plain',[(dc,p) for dc in list(range(-5,0))+list(range(1,6)) for p in (0xeeeeeeee,0xdddddddd,0xefefefef)]),('youtube',[(2,p) for p in (0xeeeeeeee,0xdddddddd,0xefefefef)])]:
+ for profile,items in [('plain',[(dc,p) for dc in list(range(-5,0))+list(range(1,6))+[-203,203] for p in (0xeeeeeeee,0xdddddddd,0xefefefef)]),('youtube',[(2,p) for p in (0xeeeeeeee,0xdddddddd,0xefefefef)])]:
   with tempfile.TemporaryDirectory() as d:
    c=app.Controller(d);c.connect_all(profile,open_browser=False)
    try:

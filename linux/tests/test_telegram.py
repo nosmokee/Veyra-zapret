@@ -9,7 +9,7 @@ class Tests(unittest.TestCase):
    c=tg.Ctr(key,iv,pure);self.assertEqual(c.apply(plain[:3])+c.apply(plain[3:]),expected)
  def test_hello_every_dc_protocol(self):
   secret=os.urandom(16)
-  for dc in list(range(-5,0))+list(range(1,6)):
+  for dc in list(range(-5,0))+list(range(1,6))+[-203,203]:
    for proto in (0xeeeeeeee,0xdddddddd,0xefefefef):
     h=bytearray(os.urandom(64));struct.pack_into('<Ih',h,56,proto,dc);wire=bytearray(h);wire[56:]=tg.Ctr(hashlib.sha256(h[8:40]+secret).digest(),h[40:56]).apply(bytes(h))[56:];self.assertEqual(tg.decode(bytes(wire),secret),(dc,proto))
     self.assertRaises(ValueError,tg.decode,bytes(wire),os.urandom(16))

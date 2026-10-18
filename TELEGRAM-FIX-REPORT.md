@@ -1,28 +1,35 @@
-# Veyra 1.1-beta.2 — Telegram stability checks
+# Veyra 1.1-beta.3 — CDN203 route correction / diagnostic candidate
 
-## Changes
-- Android accepts signed DC203 as well as signed DC1–5; the relay identity is preserved. WSS hostname for DC203 uses the upstream DC2 alias, not a random substituted DC.
-- Android uses provider-backed AES/CTR bulk encryption, buffered reads and bulk WebSocket masking. It allows 32 sessions with a correspondingly bounded worker pool (previously 16).
-- Windows allows 64 sessions and serializes masked WebSocket payloads in bulk.
-- Android and Windows try the official hostname before the fixed alternate official edge IP, remember successful TLS/WSS endpoints in memory, and retain hostname/certificate validation. Failed connections still fall back to the remaining official routes. No payload replay or claim of seamless live-session migration.
-- Windows persists the chosen local Telegram port to telegram-port.txt. Restart reuses it; if occupied, startup fails visibly instead of silently changing the endpoint stored in Telegram. Existing key files are unchanged. Android's persisted key/port behavior is retained.
+## Why this update exists
+The user reported repeated proxy disconnections and failed files/videos on Android 1.1-beta.2 and Windows. Private diagnostic files were inspected locally, not committed or published. The Windows tail contains many client-side EndOfStreamException events wrapped as generic IOException 0x80131620, plus cancelled WSS attempts; it does not establish the root cause of every disconnect. The Android report confirms beta.2, but its 500-line native logcat tail displaced Telegram-specific event details. Native `No route to host` entries cannot be attributed to Telegram from this report alone.
 
-## Verification actually performed on this Linux host
-- Full Android Gradle unit/Robolectric suite: 71 tests, zero failures. Includes listener restarts, saved key/port, occupied-port rejection, ownership, UI and existing service lifecycle tests.
-- Additional Kotlin protocol run: 16 tests passed; 32 simultaneous loopback sessions, signed DC±203, exact 4 MiB synthetic media echo, chunked CTR, actual fragmented 2 MiB WebSocket message with intervening ping/pong.
-- Same regression tests against beta.1 Android code reproduce DC203 rejection and the 16-session capacity limit. A separate route-order assertion also changes intentionally.
-- Kotlin live account-free req_pq/resPQ exchanges: 36/36 through the bridge directly; another 36/36 through a local Linux ByeDPI SOCKS using the Base disorder/split/TLS-record arguments. Covers DC±1–5, DC±203 and all 3 supported obfuscated transport markers. Matching nonces verified. This is not Android VPN routing or an authenticated media request.
-- C# tests running on Linux/.NET via PowerShell: AES NIST vector; all 4 framing variants; 64 simultaneous sessions; exact 4 MiB synthetic media echo; actual 4 MiB WebSocket masking/fragmentation and interleaved ping/pong; saved-port restart/occupied-port failure; 40 rapid close/rebind cycles; existing failure classification tests.
-- C# live account-free req_pq/resPQ exchanges: 36/36 with matching nonce across the same signed DC/protocol matrix, through the local C# bridge to official TLS/WSS endpoints.
-- Android release assemble successful. lintDebug: 0 errors, 52 warnings (not claimed warning-free).
-- APK v1/v2/v3 verified. Same signing certificate as beta.1; applicationId io.github.nosmokee.veyra.next, versionCode 10, versionName 1.1-beta.2, visible name Veyra. Existing Android Debug development certificate retained, not a new production signing identity. All 8 native .so libraries unchanged byte-for-byte.
-- Windows release x64 C#7.3 compiled against .NET Framework4.8 references. Original embedded native engine archive unchanged (SHA256 244314ae1c24538a0d751601da8e0c925c843371eec4456eb15f14c4fd6b7058). EXE is not Authenticode-signed. Existing native dependency licensing/source review limitation is unchanged; engine.zip is not added to the public source tree.
+## Confirmed/reproduced defect
+Beta.2 accepted DC203 but used the DC2 WSS hostname alias. A req_pq/resPQ nonce check was an inadequate regression test: it passed on either server. An independent account-free comparison of the public RSA fingerprint lists showed that the old DC2 alias reached a different RSA-key domain than Telegram CDN203 at 91.105.192.100:443. The corrected bridge route matches the actual CDN203 list. This is a routing defect relevant to CDN files, not proof that all user video/reconnect problems are fixed.
 
-## Not verified / limits
-No physical Android VPN/tun routing, native Windows WPF/WinDivert execution, user-account video/media download, battery/background behavior, ISP under restriction, or mobile whitelist bypass was tested here. Synthetic bytes and resPQ responses do NOT prove authenticated video playback or universal stability. TLS stays verified. No account credentials were used. No external IP change, Telegram calls, or LTE whitelist mode is added. Linux packages are unchanged from beta.1.
+## Changes on all three platforms
+- DC±203 now connects to the dedicated Telegram CDN203 endpoint via obfuscated MTProto TCP, NEVER the DC2 WSS alias. Signed DC identity and transport marker are preserved. Android/Linux route that TCP connection through their existing local SOCKS engine; Windows uses the existing system DPI-engine environment.
+- Normal DC±1–5 retain authenticated official TLS/WSS and the existing fallback addresses. No TLS certificate bypass. The CDN203 connection is **not TLS/WSS**: Telegram's own MTProto client handles server authentication and inner encryption. The bridge does not decrypt chat/file contents. No account/login credentials or foreign relay is introduced.
+- Windows: a clean client EOF at a packet boundary is no longer shown as the generic proxy failure. Truncated packets/payloads and upstream failures remain errors. This corrects error classification; it cannot by itself repair an unreachable server.
+- Android: a separate bounded 256-event Telegram diagnostic ring is exported before optional logcat, includes DC, phase, connection time and exception-cause types, and excludes proxy keys/payloads. Native logcat traffic no longer crowds it out. The ring is process-local, not a persistent cross-restart history. A repeated Telegram error prefix was removed.
+- Linux includes the previously pending signed-DC203 acceptance, 64-session cap and successful WSS-route cache changes; its CDN203 route is now corrected as above. Linux's unified connect/stop behavior remains. Windows still uses its separate Telegram switch.
 
-## Updating / old proxy settings
-1. Stop other Veyra/Veyra Test versions and their proxy/bridge before testing. Do not uninstall the Android app or clear its data: that would reset its private key.
-2. Install the new APK over canonical Veyra; on Windows fully exit Veyra, extract the new package, preserve the existing application data folder.
-3. Start Veyra and its Telegram bridge (Windows still has its separate Telegram switch). If Telegram reports incorrect settings or points at an old test build, remove only the old Veyra proxy entry in Telegram and add the active proxy from Veyra once. Confirm/enable it in Telegram. Never publish the secret from a proxy link.
-4. Test a previously uncached video, a file download, idle/reconnect, and Wi-Fi/mobile switching. If the error remains, export Android's journal / Windows telegram-diagnostic.txt; review before sharing. Do not send proxy secrets, phone/login codes, or chat contents.
+## Verification actually performed here
+- Android Gradle/Robolectric: 73 tests, 0 failures/errors/skips. Release APK assembled. lintDebug: 0 errors, 61 warnings; not warning-free.
+- Additional Kotlin protocol suite: 18 tests passed, including 32 simultaneous sessions / 4 MiB synthetic echo, actual 2 MiB fragmented WebSocket/ping, CDN203 SOCKS destination and raw TCP byte preservation, bounded diagnostics and nested causes.
+- Windows C# tests executed on Linux/.NET: raw TCP 1 MiB preservation, clean-EOF classification, saved-port restarts/occupied-port handling, 64 simultaneous sessions / 4 MiB synthetic echo, actual WebSocket framing/masking/fragmentation/ping, NIST AES-CTR and existing lifecycle/error tests. C# 7.3 Release x64 compiled against .NET Framework 4.8 references; NOT native Windows WPF/WinDivert execution.
+- Kotlin live loopback bridge exchanges: 36/36 signed DC/protocol nonce matches, including actual CDN203 TCP; not Android VPN routing or an authenticated media request.
+- C# live loopback bridge exchanges: 36 signed DC/protocol req_pq/resPQ nonce matches, including the actual CDN203 TCP endpoint after correction. These do NOT authenticate a CDN file session.
+- Linux unit suite: 33 tests passed, including CDN routing/no-WebSocket-ping/raw 2 MiB stream and existing controller/lifecycle/HTTP tests.
+- Linux live req_pq/resPQ matrix: 39 nonce matches (36 signed DC/protocol direct-profile + 3 DC2 Base-profile). CDN203 route public-key identity checked independently; `python3 linux/tests/cdn_identity.py` reproduces the old mismatch and corrected match without an account.
+- Independent Telethon diagnostic on Linux before the CDN route change: anonymous normal-DC2 auth-key generation and encrypted ping/pong passed; a main-DC2 key reused on media DC-2 also passed. Six 512 KiB synthetic RPC bodies were transmitted and returned ConnectionNotInitedError, with following pings successful. This verifies encrypted transport, not successful file upload or media download. Fresh auth-key generation on a media-only endpoint is not a supported success criterion.
+
+## Package and real-device limits
+No authenticated account video/file download, physical Android VPN/tun/background behavior, native Windows WPF/WinDivert, user ISP restriction or LTE whitelist was reproduced here. Do not treat this candidate as confirmation of universal video playback. Direct CDN TCP can still be blocked by the user's network; no paid relay/VPS is added and no connection replay is attempted.
+Linux x86_64 and aarch64 reuse their respective beta.1 native ciadpi binaries unchanged. x86_64 is executed on this host; ARM64 is architecture/hash inspected only, not executed. Without python3-cryptography Linux uses the vendored slower pure-Python AES fallback; optional distro python3-cryptography improves throughput but is not installed by the app.
+Android keeps canonical applicationId io.github.nosmokee.veyra.next, versionCode 11 and the existing development signing identity so in-place updates retain the local proxy key/port. This is NOT a newly established production signing identity. Native .so libraries are unchanged. Windows is not Authenticode-signed; its native engine.zip is unchanged and its previous licensing/source-review limitation remains. No native engine binary is added to public source archives.
+
+## Updating / physical verification required
+1. Exit other Veyra/Test copies. Android: update in place, do not uninstall or clear data. Windows/Linux: stop the old process and preserve its application data/private key/port files.
+2. Start Veyra (Windows: also its Telegram bridge). Existing proxy address/secret should remain. Re-add only the Veyra proxy entry once if Telegram still points at an old Test build; never share its secret.
+3. Try a previously uncached video and file, idle/reconnect and Wi-Fi/mobile switching. If it fails, export the new diagnostic report immediately BEFORE restarting Veyra, so Android's process-local ring is retained.
+4. No IP change, Telegram calls, Telegram Web mode, ChatGPT regional unblock or LTE whitelist bypass is provided.

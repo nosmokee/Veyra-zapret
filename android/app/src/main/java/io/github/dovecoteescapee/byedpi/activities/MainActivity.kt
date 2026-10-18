@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.logs_failed, Toast.LENGTH_LONG).show()
                 } else {
                     // The file picker may recreate the activity: load the report from persistent storage.
-                    val report = savedReport()
+                    val report = savedReport()+"\n\n--- Telegram events (bounded; no proxy keys/payloads) ---\n"+io.github.dovecoteescapee.byedpi.core.TgDiagnostics.snapshot()
                     lifecycleScope.launch {
                         val outcome = withContext(Dispatchers.IO) {
                             runCatching {
@@ -298,7 +298,7 @@ class MainActivity : AppCompatActivity() {
     private fun telegramSummary():String {
         val tg=TelegramRuntime.bridge
         return when {
-            tg!=null && tg.running && tg.error.isNotEmpty()->"Telegram: ${tg.error}"
+            tg!=null && tg.running && tg.error.isNotEmpty()->tg.error
             tg!=null && tg.running && (tg.up.get()>0 || tg.down.get()>0)->getString(R.string.ui_tg_traffic,DashboardFormatting.bytes(tg.up.get()),DashboardFormatting.bytes(tg.down.get()))
             tg!=null && tg.running->getString(R.string.ui_tg_ready)
             else->getString(R.string.ui_tg_pending)

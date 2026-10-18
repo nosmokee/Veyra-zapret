@@ -6,10 +6,12 @@ object TelegramLive {
   for(dc in ((1..5).toList()+203).flatMap { listOf(it,-it) })for(proto in listOf(0xeeeeeeee.toInt(),0xdddddddd.toInt(),0xefefefef.toInt())) {
    val secret=TgWire.random(16)
    TelegramBridge(secret,{id,media->
+    if(id==203) TgTcpSocket.connect203(args.firstOrNull()?.toInt()) else {
     var result:TgSocket?=null;var last:Exception?=null
     routes@ for(host in TgWire.hosts(id,media))for(address in TgWire.addresses(id,host)) {
      try{result=TgWebSocket.connect(host,address,args.firstOrNull()?.toInt());println("TLS verified: DC$id $host via $address");break@routes}catch(e:Exception){last=e}
     };result ?: throw java.io.IOException("No Telegram route",last)
+    }
    },{println(it)}).use {bridge->
     bridge.start(0)
     Socket("127.0.0.1",bridge.port).use {s->

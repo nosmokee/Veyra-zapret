@@ -28,8 +28,8 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Veyra")]
 [assembly: TargetFramework(".NETFramework,Version=v4.8",FrameworkDisplayName=".NET Framework 4.8")]
 [assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.2")]
-[assembly: AssemblyInformationalVersion("1.1-beta.2")]
+[assembly: AssemblyFileVersion("1.1.0.3")]
+[assembly: AssemblyInformationalVersion("1.1-beta.3")]
 namespace ZapretDesk {
 [DataContract] public sealed class Settings {
  [DataMember] public string Profile="general.bat";
@@ -104,7 +104,7 @@ public sealed class Engine {
  public static async Task<List<Check>> ProbeTelegramWeb(CancellationToken cancel){var list=new List<Check>();string[] urls={"https://telegram.org/","https://desktop.telegram.org/"};for(int i=0;i<urls.Length;i++){cancel.ThrowIfCancellationRequested();var row=new Check{Name=i==0?"Telegram.org":"Скачать Telegram"};var clock=Stopwatch.StartNew();try{using(var handler=new HttpClientHandler{AllowAutoRedirect=true,AutomaticDecompression=DecompressionMethods.GZip|DecompressionMethods.Deflate})using(var client=new HttpClient(handler)){client.Timeout=TimeSpan.FromSeconds(7);client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/6.0 Veyra");using(var response=await client.GetAsync(urls[i],HttpCompletionOption.ResponseHeadersRead,cancel).ConfigureAwait(false)){row.Code=(int)response.StatusCode;row.Ok=row.Code>=200&&row.Code<400;}}}catch(OperationCanceledException){cancel.ThrowIfCancellationRequested();row.Error="Таймаут";}catch(Exception){row.Error="Нет HTTPS-ответа";}clock.Stop();row.Ms=clock.ElapsedMilliseconds;list.Add(row);}return list;}
  public static async Task<List<Check>> Probe(CancellationToken cancel){var list=new List<Check>();string[] names={"YouTube","Discord","Discord API","Google","GitHub","ChatGPT"};string[] urls={"https://www.youtube.com/","https://discord.com/","https://discord.com/api/v10/gateway","https://www.google.com/generate_204","https://github.com/","https://chatgpt.com/"};
   for(int i=0;i<urls.Length;i++){cancel.ThrowIfCancellationRequested();var row=new Check{Name=names[i]};var watch=Stopwatch.StartNew();try{
-    using(var handler=new HttpClientHandler{AllowAutoRedirect=true,AutomaticDecompression=DecompressionMethods.GZip|DecompressionMethods.Deflate})using(var client=new HttpClient(handler)){client.Timeout=TimeSpan.FromSeconds(5);client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 Veyra/1.1-beta.2");client.DefaultRequestHeaders.ConnectionClose=true;using(var response=await client.GetAsync(urls[i],HttpCompletionOption.ResponseHeadersRead,cancel).ConfigureAwait(false)){row.Code=(int)response.StatusCode;row.Ok=row.Code>=200&&row.Code<400;}}
+    using(var handler=new HttpClientHandler{AllowAutoRedirect=true,AutomaticDecompression=DecompressionMethods.GZip|DecompressionMethods.Deflate})using(var client=new HttpClient(handler)){client.Timeout=TimeSpan.FromSeconds(5);client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 Veyra/1.1-beta.3");client.DefaultRequestHeaders.ConnectionClose=true;using(var response=await client.GetAsync(urls[i],HttpCompletionOption.ResponseHeadersRead,cancel).ConfigureAwait(false)){row.Code=(int)response.StatusCode;row.Ok=row.Code>=200&&row.Code<400;}}
    }catch(OperationCanceledException){cancel.ThrowIfCancellationRequested();row.Error="Таймаут";}catch(Exception e){row.Error=e.Message;}watch.Stop();row.Ms=watch.ElapsedMilliseconds;list.Add(row);
   }return list;
  }
@@ -171,7 +171,7 @@ public static class Scenes {
   if(m.Tab=="welcome")return Welcome(m,width,height);
   var b=new Builder();float left=m.Onboarding?0:UiLayout.Sidebar(m.Look,width);float hh=m.Onboarding?76:left>0?50:UiLayout.Header(width),cw=UiLayout.Content(width-left),x=left+(width-left-cw)/2,top=hh+26,y=top+76;b.S.HeaderHeight=hh;b.Offset=-m.Scroll;bool compact=cw<850,narrow=cw<620;
   string title=m.Tab=="home"?"Подключение":m.Tab=="strategies"?"Стратегии":m.Tab=="settings"?"Настройки":m.Tab=="personal"?"Персонализация":m.Tab=="telegram"?"Telegram":"О приложении";
-  b.Text(m.Tab=="home"&&!String.IsNullOrWhiteSpace(m.Look.Hello)?m.Look.Hello.Replace("{name}",m.Look.Name==""?"Nosmoke":m.Look.Name):title,x,top,cw,38,27,Palette.Text,true);b.Text(m.Tab=="home"?(String.IsNullOrWhiteSpace(m.Look.Subtitle.Replace("{name}",m.Look.Name==""?"Nosmoke":m.Look.Name))?"Твоя сеть. Под твоим контролем.":m.Look.Subtitle.Replace("{name}",m.Look.Name==""?"Nosmoke":m.Look.Name)):m.Tab=="strategies"?"Выбор по результатам шести HTTPS-проверок":m.Tab=="settings"?"Параметры движка и работа в фоне":m.Tab=="personal"?"Цвет, фон и ничего лишнего":m.Tab=="telegram"?"Локальный MTProxy → официальный Telegram WSS":"Veyra · независимая оболочка",x,top+43,cw,26,14,Palette.Muted);
+  b.Text(m.Tab=="home"&&!String.IsNullOrWhiteSpace(m.Look.Hello)?m.Look.Hello.Replace("{name}",m.Look.Name==""?"Nosmoke":m.Look.Name):title,x,top,cw,38,27,Palette.Text,true);b.Text(m.Tab=="home"?(String.IsNullOrWhiteSpace(m.Look.Subtitle.Replace("{name}",m.Look.Name==""?"Nosmoke":m.Look.Name))?"Твоя сеть. Под твоим контролем.":m.Look.Subtitle.Replace("{name}",m.Look.Name==""?"Nosmoke":m.Look.Name)):m.Tab=="strategies"?"Выбор по результатам шести HTTPS-проверок":m.Tab=="settings"?"Параметры движка и работа в фоне":m.Tab=="personal"?"Цвет, фон и ничего лишнего":m.Tab=="telegram"?"MTProxy → Telegram WSS / CDN TCP":"Veyra · независимая оболочка",x,top+43,cw,26,14,Palette.Muted);
   if(m.Tab=="home"){
    float ch=compact?(narrow?400:354):240; b.Rect(x,y,cw,ch,Palette.Card,Palette.Border);float split=compact?x+cw:x+cw*.63f;
    b.Icon("shield",x+24,y+24,20,Palette.Accent);b.Text("ОБХОД DPI",x+54,y+25,220,24,14,Palette.Muted,true);
@@ -189,7 +189,7 @@ public static class Scenes {
    y+=(float)Math.Ceiling(names.Length/(float)cols)*94+12;
    if(m.Best!=null&&m.ScanFinished&&!m.Cancelled)y+=BestCard(b,m,x,y,cw)+24;
    else{float h=narrow?186:124;b.Rect(x,y,cw,h,Palette.Card,Palette.Border);b.Icon("strategy",x+24,y+24,22,Palette.Accent);b.Text("Подбор стратегии",x+59,y+22,cw-83,30,20,Palette.Text,true);b.Text("22 варианта. Шесть адресов. Лучший — отдельной карточкой.",x+24,y+65,narrow?cw-48:cw-318,48,14,Palette.Muted);b.Button("nav:strategies","Открыть стратегии",narrow?x+24:x+cw-270,narrow?y+118:y+57,narrow?cw-48:246,false,true,false,46,"arrow");y+=h+24;}
-   float th=narrow?200:156;b.Rect(x,y,cw,th,Palette.Card,Palette.Border,10);b.Icon("send",x+24,y+23,24,"#38A9DE");b.Text("Telegram · WSS-мост",x+62,y+20,cw-86,32,21,Palette.Text,true);
+   float th=narrow?200:156;b.Rect(x,y,cw,th,Palette.Card,Palette.Border,10);b.Icon("send",x+24,y+23,24,"#38A9DE");b.Text("Telegram · мост",x+62,y+20,cw-86,32,21,Palette.Text,true);
    b.Text("Локальный MTProxy для сообщений и медиа в приложении Telegram. Звонки не поддерживаются этим мостом.",x+24,y+66,cw-48,narrow?62:40,14,Palette.Muted);
    b.Button("nav:telegram","Настроить Telegram",x+24,y+(narrow?140:104),narrow?cw-48:260,false,true,false,42,"send");y+=th+24;
    b.Text("Не VPN: IP не меняется. Доступность HTTPS не гарантирует работу видео и голосовой связи.",x,y,cw,58,14,Palette.Muted);y+=82;
@@ -225,8 +225,8 @@ public static class Scenes {
    b.Text("Сохраняется автоматически. Все фоны статичные.",x,y,cw,68,14,Palette.Muted);y+=84;
 
   }else if(m.Tab=="telegram"){
-   float noticeH=narrow?412:338;b.Rect(x,y,cw,noticeH,Palette.Card,Palette.Border);b.Text(m.TgRunning?"MTProxy запущен · 127.0.0.1:"+m.TgPort:"Telegram · отдельный WSS-мост",x+20,y+18,cw-40,60,20,Palette.Text,true);
-   b.Text("Только официальный Telegram: TLS проверяется, для DC2/DC4 есть резервный IP. Включи мост и затем добавь его кнопкой в Telegram.",x+20,y+86,cw-40,narrow?100:64,14,Palette.Muted);
+   float noticeH=narrow?412:338;b.Rect(x,y,cw,noticeH,Palette.Card,Palette.Border);b.Text(m.TgRunning?"MTProxy запущен · 127.0.0.1:"+m.TgPort:"Telegram · отдельный мост",x+20,y+18,cw-40,60,20,Palette.Text,true);
+   b.Text("Официальный Telegram: WSS с проверкой TLS; CDN203 — отдельный MTProto TCP. Включи мост и добавь прокси в Telegram.",x+20,y+86,cw-40,narrow?100:64,14,Palette.Muted);
    b.Button("tg:toggle",m.TgBusy?"Подождите…":m.TgRunning?"Остановить мост":"Включить мост",x+20,y+(narrow?204:164),narrow?cw-40:(cw-52)/2,true,!m.TgBusy,false,46,"power");
    b.Button("tg:open","Добавить в Telegram",narrow?x+20:x+32+(cw-52)/2,y+(narrow?264:164),narrow?cw-40:(cw-52)/2,false,m.TgRunning&&!m.TgBusy,false,46,"send");
    b.Text(m.TgRunning?"Передано: "+m.TgUp+" B ↑ / "+m.TgDown+" B ↓ · сессий: "+m.TgSessions:"Мост выключен. Прокси в Telegram нужно включить отдельно.",x+20,y+(narrow?328:230),cw-40,54,14,Palette.Muted);
@@ -242,7 +242,7 @@ public static class Scenes {
    y+=AboutSection(b,"Как работает обход","В текущей Windows-сборке используется оригинальный движок Flowseal / zapret-discord-youtube. Оболочка запускает собственный процесс winws и не останавливает чужие копии. Это DPI-обход, а не VPN: он не меняет IP-адрес и не обеспечивает анонимность. Доступность зависит от провайдера, сети и выбранной стратегии.",x,y,cw)+16;
    y+=AboutSection(b,"Что означают проверки","По вашей команде приложение отправляет HTTPS-запросы YouTube, Discord, Discord API, Google, GitHub и ChatGPT. Успешный ответ означает только ответ проверенного адреса. Проверка HTTPS не тестирует Telegram-модуль. Он не подтверждает работу аккаунта ChatGPT, воспроизведение YouTube, загрузку файлов, Discord Voice или звонки Telegram. Работа процесса и работа конкретного сервиса — разные состояния.",x,y,cw)+16;
    y+=AboutSection(b,"Данные и конфиденциальность","Оболочка не требует аккаунта и не отправляет собственную телеметрию. Настройки, согласие и диагностические записи сохраняются в локальной папке приложения в профиле Windows. Telegram-мост включается вручную; локальный ключ хранится с защитой DPAPI пользователя Windows. Файлы прежних версий автоматически не удаляются. Сетевые проверки обращаются к указанным сервисам, которые видят запрос и ваш сетевой адрес. Перед передачей диагностического файла проверьте его содержимое; не передавайте пароли, коды входа и ключи прокси.",x,y,cw)+16;
-   y+=AboutSection(b,"Закрытие, условия и дальнейшая работа","Крестик скрывает основное окно в трей; подключение и текущая проверка продолжаются. Полное завершение — пункт «Выход» в меню значка. Повторный запуск открывает существующее окно. Автозагрузка Windows не добавляется. Используйте программу с учётом правил своей сети и местных требований: результат и доступность сервисов не гарантируются. Telegram: локальный MTProxy/WSS для приложения, не звонков. Linux и iOS в этом обновлении не менялись. VPN и маршрутизация по приложениям не включены. Подготовка других платформ потребует отдельных сетевых реализаций.",x,y,cw)+16;
+   y+=AboutSection(b,"Закрытие, условия и дальнейшая работа","Крестик скрывает основное окно в трей; подключение и текущая проверка продолжаются. Полное завершение — пункт «Выход» в меню значка. Повторный запуск открывает существующее окно. Автозагрузка Windows не добавляется. Используйте программу с учётом правил своей сети и местных требований: результат и доступность сервисов не гарантируются. Telegram: локальный MTProxy/WSS для приложения, не звонков. Исправления Linux опубликованы отдельно; iOS не поддерживается. VPN и маршрутизация по приложениям не включены. Подготовка других платформ потребует отдельных сетевых реализаций.",x,y,cw)+16;
    if(!m.Onboarding)b.Button("folder","Папка данных",x,y,narrow?cw:196,false,true,false,44,"folder");y+=68;
 
   }

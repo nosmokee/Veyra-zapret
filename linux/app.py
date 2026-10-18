@@ -3,7 +3,7 @@
 import argparse, atexit, concurrent.futures, fcntl, http.server, json, os, pathlib
 import secrets, shutil, signal, socket, ssl, subprocess, threading, time, webbrowser
 import html, platform, struct, urllib.parse
-VERSION = "1.1-beta.1"
+VERSION = "1.1-beta.3"
 from telegram_bridge import Bridge, WebSocket
 BASE = pathlib.Path(__file__).resolve().parent
 PROFILES = {'youtube': ('Veyra Base · SNI / TCP', ['--timeout','3','--disorder','1+s','--auto=torst','--split','1+s','--tlsrec','3+s']),
@@ -240,7 +240,7 @@ def page(controller,token,tab='home',message='',failed=False):
     body=''
     tg=state['telegram'];both=running and tg['running']
     connect=form(token,'stop' if running else 'connect',tab,'<button class="primary connect" id="connect">'+('Отключить всё' if running else 'Подключить всё')+'</button>')
-    tgcard='<section class="card"><h2>Telegram · WSS-мост</h2><p>'+('Мост запущен · '+str(tg['sessions'])+' сессий' if tg['running'] else 'Запускается общей кнопкой Veyra')+'</p>'+form(token,'telegram',tab,'<button'+('' if tg['running'] else ' disabled')+'>Добавить в Telegram</button>')+'<p>Прокси добавляется один раз. Сообщения и медиа; без звонков. После отключения Veyra выключи этот прокси в Telegram, если он мешает прямому подключению.</p></section>'
+    tgcard='<section class="card"><h2>Telegram · мост</h2><p>'+('Мост запущен · '+str(tg['sessions'])+' сессий' if tg['running'] else 'Запускается общей кнопкой Veyra')+'</p>'+form(token,'telegram',tab,'<button'+('' if tg['running'] else ' disabled')+'>Добавить в Telegram</button>')+'<p>Прокси добавляется один раз. Сообщения и медиа; без звонков. После отключения Veyra выключи этот прокси в Telegram, если он мешает прямому подключению.</p></section>'
     if tab=='home':
         body='<header><small>VEYRA / LINUX · BETA</small><h1>Твоя сеть.<br>Под твоим контролем.</h1><p>Одна кнопка для браузера и Telegram.</p></header><section class="card hero"><div><small>ЛОКАЛЬНОЕ ПОДКЛЮЧЕНИЕ</small><h2 id="status">'+('Обход и Telegram-мост включены' if both else 'Локальный прокси запущен' if running else 'Готов к подключению')+'</h2><p>'+escape(profile_names[state['profile']])+'</p>'+connect+'</div><div class="detail"><span class="shield">◇</span><p id="address">'+escape(address)+'</p><small>'+('Telegram · 127.0.0.1:'+str(tg['port']) if tg['running'] else 'Telegram ждёт запуска')+'</small></div></section><div class="row tools">'+form(token,'refresh',tab,'<button>↻ Обновить</button>')+form(token,'ping',tab,'<button'+('' if running else ' disabled')+'>⌁ Пинг</button>')+browser+'</div><p>'+escape(state['ping'])+'</p>'+('<p class="error">'+escape(state['browser_warning'])+'</p>' if state['browser_warning'] else '')+tgcard+'<section class="card"><h2>Не системный VPN</h2><p>При подключении открывается отдельное окно Chromium, Chrome или Firefox с SOCKS5 и выключенным QUIC/HTTP3. Настройки основного браузера, маршруты и firewall не меняются. Другие приложения автоматически не переключаются. Внешний IP не меняется; региональные ограничения ChatGPT не снимаются.</p></section>'
     elif tab=='strategies':
@@ -254,7 +254,7 @@ def page(controller,token,tab='home',message='',failed=False):
     elif tab=='personal':
         body='<h1>Оформление</h1><section class="card"><p>Veyra 1.1 использует тёмную янтарную тему.</p></section>'
     else:
-        body='<h1>О приложении</h1><section class="card"><h2>Veyra 1.1 Beta</h2><p>by Nosmoke · @recobalt</p><p>Локальный SOCKS5 на базе hufrea/ByeDPI и MTProxy → официальный Telegram WSS с проверкой TLS. Не удалённый VPN, без смены IP. Пароли и учётная запись Telegram не требуются.</p><p>Python 3.9+, Chromium/Chrome/Firefox. Лицензии: LICENSE и LICENSES. x86_64 и aarch64; платформенные ограничения и результаты проверок находятся в TEST-REPORT.md.</p></section>'
+        body='<h1>О приложении</h1><section class="card"><h2>Veyra 1.1 Beta</h2><p>by Nosmoke · @recobalt</p><p>Локальный SOCKS5 на базе hufrea/ByeDPI и MTProxy → Telegram WSS с проверкой TLS; CDN203 подключается к собственному серверу через MTProto TCP. Не удалённый VPN, без смены IP. Пароли и учётная запись Telegram не требуются.</p><p>Python 3.9+, Chromium/Chrome/Firefox. Лицензии: LICENSE и LICENSES. x86_64 и aarch64; платформенные ограничения и результаты проверок находятся в TEST-REPORT.md.</p></section>'
     nav=''.join('<a href="/?tab='+key+'"'+(' class="active" aria-current="page"' if key==tab else '')+'>'+name+'</a>' for key,name in TABS.items())
     notice=message or state['error']
     template=(BASE/'ui.html').read_text(encoding='utf8')

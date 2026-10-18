@@ -113,7 +113,7 @@ class Tests(unittest.TestCase):
     else:self.assertIn('network.proxy.socks_remote_dns', (self.c.data/('browser-'+str(self.c.port))/'user.js').read_text())
   with patch.object(app.shutil,'which',return_value=None):self.assertEqual(self.api('browser')[0],400)
  def test_17_diagnostics(self):
-  status,b,h=self.request('/diagnostics.txt');self.assertEqual(status,200);self.assertIn('Veyra Linux 1.1-beta.1',b.decode());self.assertNotIn(self.token,b.decode())
+  status,b,h=self.request('/diagnostics.txt');self.assertEqual(status,200);self.assertIn(f'Veyra Linux {app.VERSION}',b.decode());self.assertNotIn(self.token,b.decode())
  def test_18_html_escape(self):
   text=app.page(self.c,self.token,message='<script>alert(1)</script>').decode();self.assertNotIn('<script>',text);self.assertIn('&lt;script&gt;',text)
  def test_19_exit(self):
@@ -137,7 +137,7 @@ class Tests(unittest.TestCase):
  def test_21_launcher_lock_and_sigterm(self):
   data=pathlib.Path(self.tmp.name)/'launch';log=pathlib.Path(self.tmp.name)/'launch.log'
   with log.open('w') as out:
-   process=subprocess.Popen([str(ROOT/'veyra'),'--no-browser','--data-dir',str(data)],stdout=out,stderr=subprocess.STDOUT)
+   process=subprocess.Popen(['sh',str(ROOT/'veyra'),'--no-browser','--data-dir',str(data)],stdout=out,stderr=subprocess.STDOUT)
   try:
    for _ in range(50):
     text=log.read_text()

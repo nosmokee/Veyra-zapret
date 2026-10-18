@@ -33,6 +33,17 @@ namespace ZapretDesk {
   }}}
   int disposed;public void Dispose(){if(Interlocked.Exchange(ref disposed,1)!=0)return;life.Cancel();tcp.Close();stream.Dispose();}
  }
+ // CDN203 has its own MTProto RSA/auth-key domain, not the DC2 WSS server.
+ public sealed class TelegramTcpTransport:ITgSocket {
+  public const string Cdn203="91.105.192.100";
+  readonly TcpClient client;readonly NetworkStream stream;
+  TelegramTcpTransport(TcpClient c){client=c;stream=c.GetStream();}
+  public static Task<ITgSocket> Connect203(CancellationToken token){return Connect(Cdn203,443,token);}
+  internal static async Task<ITgSocket> Connect(string address,int port,CancellationToken token){var c=new TcpClient();try{using(var deadline=CancellationTokenSource.CreateLinkedTokenSource(token)){deadline.CancelAfter(TimeSpan.FromSeconds(6));using(deadline.Token.Register(()=>c.Close())){await c.ConnectAsync(address,port).ConfigureAwait(false);deadline.Token.ThrowIfCancellationRequested();c.NoDelay=true;c.Client.SetSocketOption(SocketOptionLevel.Socket,SocketOptionName.KeepAlive,true);return new TelegramTcpTransport(c);}}}catch{c.Close();token.ThrowIfCancellationRequested();throw;}}
+  public Task Send(byte[] data,CancellationToken token){return stream.WriteAsync(data,0,data.Length,token);}
+  public async Task<byte[]> Receive(CancellationToken token){var b=new byte[65536];using(token.Register(()=>client.Close())){int n=await stream.ReadAsync(b,0,b.Length,token).ConfigureAwait(false);if(n==0)return null;Array.Resize(ref b,n);return b;}}
+  public void Dispose(){client.Close();}
+ }
  public static class TelegramRoutes {
   // Production DC identity is preserved. No foreign relays or random IP scanning.
   // 149.154.167.220 is an alternate Telegram WSS edge, not a replacement DC id.
