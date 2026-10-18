@@ -1,0 +1,83 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/veyra_bg" android:orientation="vertical">
+  <ScrollView android:id="@+id/page_scroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="12dp" android:paddingBottom="16dp">
+      <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView style="@style/Veyra.Title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ui_brand" android:textColor="@color/veyra_lime" android:letterSpacing="0.04"/>
+        <TextView style="@style/Veyra.Muted" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:text="@string/ui_version"/>
+        <androidx.appcompat.widget.AppCompatImageButton android:id="@+id/about_button" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/veyra_card_state" android:src="@drawable/veyra_info" android:padding="13dp" android:contentDescription="@string/ui_about"/>
+      </LinearLayout>
+      <LinearLayout android:id="@+id/home_page" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="16dp">
+          <LinearLayout android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:gravity="center" android:orientation="horizontal">
+            <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/veyra_up" android:importantForAccessibility="no"/>
+            <TextView android:id="@+id/upload_rate" style="@style/Veyra.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:text="@string/ui_unknown_rate" android:contentDescription="@string/ui_upload" android:fontFamily="monospace" android:textSize="14sp"/>
+          </LinearLayout>
+          <LinearLayout android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:gravity="center" android:orientation="horizontal">
+            <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/veyra_clock" android:importantForAccessibility="no"/>
+            <TextView android:id="@+id/session_time" style="@style/Veyra.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:text="@string/ui_zero_time" android:contentDescription="@string/ui_duration" android:fontFamily="monospace" android:textSize="14sp"/>
+          </LinearLayout>
+          <LinearLayout android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:gravity="center" android:orientation="horizontal">
+            <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/veyra_down" android:importantForAccessibility="no"/>
+            <TextView android:id="@+id/download_rate" style="@style/Veyra.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:text="@string/ui_unknown_rate" android:contentDescription="@string/ui_download" android:fontFamily="monospace" android:textSize="14sp"/>
+          </LinearLayout>
+        </LinearLayout>
+        <io.github.dovecoteescapee.byedpi.ui.ShieldButton android:id="@+id/status_button" android:layout_width="match_parent" android:layout_height="220dp" android:layout_marginTop="12dp" android:contentDescription="@string/ui_connect"/>
+        <TextView android:id="@+id/connection_action" style="@style/Veyra.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_connect" android:gravity="center" android:textSize="19sp" android:fontFamily="sans-serif-medium"/>
+        <TextView android:id="@+id/status_text" style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_disconnected" android:gravity="center" android:layout_marginTop="6dp" android:accessibilityLiveRegion="polite"/>
+        <LinearLayout android:id="@+id/preset_button" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_marginTop="24dp" android:background="@drawable/veyra_card_state" android:clickable="true" android:focusable="true" android:padding="16dp" android:gravity="center_vertical">
+          <ImageView android:layout_width="26dp" android:layout_height="26dp" android:src="@drawable/veyra_layers" android:importantForAccessibility="no"/>
+          <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="14dp" android:orientation="vertical">
+            <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_selected"/>
+            <TextView android:id="@+id/selected_profile" style="@style/Veyra.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_choose" android:layout_marginTop="3dp" android:fontFamily="sans-serif-medium"/>
+          </LinearLayout>
+          <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/veyra_arrow" android:importantForAccessibility="no"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="16dp" android:orientation="horizontal">
+          <com.google.android.material.button.MaterialButton android:id="@+id/refresh_button" style="@style/Veyra.Button" android:layout_width="0dp" android:layout_height="48dp" android:text="@string/ui_refresh" app:icon="@drawable/veyra_refresh" android:layout_weight="1" android:layout_marginEnd="6dp"/>
+          <com.google.android.material.button.MaterialButton android:id="@+id/ping_button" style="@style/Veyra.Button" android:layout_width="0dp" android:layout_height="48dp" android:text="@string/ui_ping" app:icon="@drawable/veyra_ping" android:layout_weight="1" android:layout_marginStart="6dp"/>
+        </LinearLayout>
+        <TextView android:id="@+id/ping_result" style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_ping_hint" android:layout_marginTop="8dp" android:gravity="center" android:accessibilityLiveRegion="polite"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/veyra_card" android:padding="16dp" android:layout_marginTop="18dp">
+          <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/veyra_telegram" android:importantForAccessibility="no"/>
+            <TextView style="@style/Veyra.Body" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="10dp" android:text="@string/ui_telegram" android:fontFamily="sans-serif-medium"/>
+            <TextView android:id="@+id/telegram_home_button" style="@style/Veyra.Body" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="88dp" android:gravity="center" android:text="@string/ui_tg_setup" android:textColor="@color/veyra_lime" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground"/>
+          </LinearLayout>
+          <TextView android:id="@+id/telegram_summary" style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_tg_off" android:layout_marginTop="2dp"/>
+        </LinearLayout>
+        <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_local_note" android:layout_marginTop="16dp" android:lineSpacingExtra="3dp"/>
+      </LinearLayout>
+      <LinearLayout android:id="@+id/strategies_page" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:layout_marginTop="22dp">
+        <TextView style="@style/Veyra.Title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_strategies"/>
+        <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_strategy_intro" android:layout_marginTop="8dp" android:lineSpacingExtra="3dp"/>
+        <LinearLayout android:id="@+id/strategy_list" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:orientation="vertical"/>
+        <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_strategy_locked" android:layout_marginTop="8dp"/>
+      </LinearLayout>
+      <LinearLayout android:id="@+id/settings_page" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:layout_marginTop="22dp">
+        <TextView style="@style/Veyra.Title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_settings"/>
+        <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_settings_intro" android:layout_marginTop="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/veyra_card" android:padding="16dp" android:layout_marginTop="22dp">
+          <TextView style="@style/Veyra.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_telegram" android:textSize="19sp" android:fontFamily="sans-serif-medium"/>
+          <TextView android:id="@+id/telegram_settings_status" style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_tg_off" android:layout_marginTop="8dp"/>
+          <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_tg_settings_note" android:layout_marginTop="12dp" android:lineSpacingExtra="3dp"/>
+          <com.google.android.material.button.MaterialButton android:id="@+id/telegram_button" style="@style/Veyra.Button" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:paddingTop="12dp" android:paddingBottom="12dp" android:text="@string/ui_tg_action" app:icon="@drawable/veyra_telegram" android:layout_marginTop="16dp"/>
+        </LinearLayout>
+        <com.google.android.material.button.MaterialButton android:id="@+id/advanced_button" android:visibility="gone" style="@style/Veyra.Button" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/ui_advanced" app:icon="@drawable/veyra_settings" android:layout_marginTop="20dp"/>
+        <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_advanced_hint" android:visibility="gone" android:layout_marginTop="8dp"/>
+        <com.google.android.material.button.MaterialButton android:id="@+id/export_button" style="@style/Veyra.Button" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/ui_export" app:icon="@drawable/veyra_layers" android:layout_marginTop="20dp"/>
+        <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_export_hint" android:layout_marginTop="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/veyra_card" android:padding="16dp" android:layout_marginTop="22dp">
+          <TextView style="@style/Veyra.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_no_ip_title"/>
+          <TextView style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ui_no_ip_note" android:layout_marginTop="8dp"/>
+        </LinearLayout>
+        <TextView android:id="@+id/proxy_address" style="@style/Veyra.Muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="127.0.0.1:1080" android:layout_marginTop="20dp"/>
+        <com.google.android.material.button.MaterialButton android:id="@+id/github_button" style="@style/Veyra.Button" android:layout_width="match_parent" android:layout_height="48dp" android:text="@string/ui_github" android:layout_marginTop="24dp"/>
+      </LinearLayout>
+    </LinearLayout>
+  </ScrollView>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:layout_marginEnd="16dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp" android:padding="6dp" android:background="@drawable/veyra_nav_bg" android:gravity="center_vertical" android:orientation="horizontal" android:minHeight="80dp" android:baselineAligned="false">
+    <com.google.android.material.button.MaterialButton android:id="@+id/nav_home" style="@style/Veyra.Nav" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/ui_home" app:icon="@drawable/veyra_home" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/nav_strategies" style="@style/Veyra.Nav" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/ui_strategies" app:icon="@drawable/veyra_layers" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/nav_settings" style="@style/Veyra.Nav" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/ui_settings" app:icon="@drawable/veyra_settings" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp"/>
+  </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,1 @@
+<resources><style name="Theme.Veyra.Dashboard" parent="Theme.ByeDPI"><item name="windowActionBar">false</item><item name="windowNoTitle">true</item><item name="colorPrimary">@color/veyra_lime</item><item name="colorOnPrimary">@color/veyra_bg</item><item name="android:forceDarkAllowed">false</item></style></resources>

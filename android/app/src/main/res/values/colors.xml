@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+<color name="veyra_bg">#111214</color>
+<color name="veyra_surface">#1B1C20</color>
+<color name="veyra_raised">#29251B</color>
+<color name="veyra_line">#777064</color>
+<color name="veyra_lime">#FFD15C</color>
+<color name="veyra_text">#F5F1E8</color>
+<color name="veyra_muted">#B7B1A5</color>
+<color name="veyra_danger">#FFADA1</color>
+</resources>
