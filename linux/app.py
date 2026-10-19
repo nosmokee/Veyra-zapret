@@ -3,8 +3,17 @@
 import argparse, atexit, concurrent.futures, fcntl, http.server, json, os, pathlib
 import secrets, shutil, signal, socket, ssl, subprocess, threading, time, webbrowser
 import html, platform, struct, urllib.parse
-VERSION = "1.1-beta.2-fix.1"
-from telegram_bridge import Bridge, WebSocket
+VERSION = "1.2"
+from telegram_bridge import WebSocket
+import sys
+_ENGINE_DIR = pathlib.Path(__file__).resolve().parent/'telegram-engine'
+if not _ENGINE_DIR.is_dir(): _ENGINE_DIR = pathlib.Path(__file__).resolve().parent.parent/'telegram-engine'
+sys.path.insert(0,str(_ENGINE_DIR/'python-libs'))
+sys.path.insert(0,str(_ENGINE_DIR))
+from veyra_engine import Engine as FlowsealEngine
+class Bridge(FlowsealEngine):
+    def __init__(self,secret,connector=None):super().__init__(secret.hex(),0)
+
 BASE = pathlib.Path(__file__).resolve().parent
 PROFILES = {'youtube': ('Veyra Base · SNI / TCP', ['--timeout','3','--disorder','1+s','--auto=torst','--split','1+s','--tlsrec','3+s']),
             'split': ('Veyra Alt 1', ['--split', '1']),
@@ -46,7 +55,7 @@ class Controller:
         self.data=pathlib.Path(data); self.data.mkdir(parents=True,exist_ok=True,mode=0o700)
         self.engine=pathlib.Path(engine or BASE/'bin/ciadpi')
         self.lock=threading.RLock(); self.proc=None; self.log=None; self.port=0; self.error=''; self.checks=[]
-        self.bridge=None;self.ping_text='Замер WSS до Telegram через Veyra';self.browser_warning=''
+        self.bridge=None;self.telegram_log="";self.ping_text='Замер WSS до Telegram через Veyra';self.browser_warning=''
         self.profile='youtube'; self.theme='dark'; self.color='amber'; self.background='none'
         try:
             cfg=json.loads((self.data/'settings.json').read_text())
@@ -66,7 +75,7 @@ class Controller:
         with self.lock:
             if self.proc is not None and self.proc.poll() is not None and not self.error:
                 self.error='Движок неожиданно завершился (код '+str(self.proc.returncode)+'). '+self.log_tail()
-                if self.bridge is not None:self.bridge.close();self.bridge=None
+                if self.bridge is not None:self.bridge.close();self.telegram_log=self.bridge.diagnostics();self.bridge=None
 
             return {'version':VERSION,'running':self.running(),'port':self.port if self.running() else 0,
                     'profile':self.profile,'profiles':[{ 'id':k,'name':v[0]} for k,v in PROFILES.items()],
@@ -86,7 +95,7 @@ class Controller:
         if expected and machine!=expected: raise ValueError('Неподходящая архитектура bin/ciadpi: скачай архив для '+platform.machine()+'.')
     def stop(self):
         with self.lock:
-            if self.bridge is not None:self.bridge.close();self.bridge=None
+            if self.bridge is not None:self.bridge.close();self.telegram_log=self.bridge.diagnostics();self.bridge=None
             if self.proc is not None:
                 if self.proc.poll() is None:
                     self.proc.terminate()
@@ -134,7 +143,7 @@ class Controller:
                     cfg=json.loads(path.read_text());secret=bytes.fromhex(cfg['secret']);port=cfg['port']
                     if len(secret)!=16 or type(port)!=int or not 1<=port<=65535:raise ValueError('Повреждены локальные настройки Telegram')
                 else:secret=secrets.token_bytes(16);port=0
-                b=Bridge(secret,connector=lambda host,port:socks_connect(self.port,host,port));self.bridge=b
+                b=Bridge(secret);self.bridge=b
                 b.start(port)
                 if not path.exists():
                     tmp=path.with_suffix('.tmp')
@@ -240,7 +249,7 @@ def page(controller,token,tab='home',message='',failed=False):
     body=''
     tg=state['telegram'];both=running and tg['running']
     connect=form(token,'stop' if running else 'connect',tab,'<button class="primary connect" id="connect">'+('Отключить всё' if running else 'Подключить всё')+'</button>')
-    tgcard='<section class="card"><h2>Telegram · мост</h2><p>'+('Мост запущен · '+str(tg['sessions'])+' сессий' if tg['running'] else 'Запускается общей кнопкой Veyra')+'</p>'+form(token,'telegram',tab,'<button'+('' if tg['running'] else ' disabled')+'>Добавить в Telegram</button>')+'<p>Прокси добавляется один раз. Сообщения и медиа; без звонков. После отключения Veyra выключи этот прокси в Telegram, если он мешает прямому подключению.</p></section>'
+    tgcard='<section class="card"><h2>Telegram · мост</h2><p>'+('Мост запущен · '+str(tg['sessions'])+' сессий' if tg['running'] else 'Запускается общей кнопкой Veyra')+'</p>'+form(token,'telegram',tab,'<button'+('' if tg['running'] else ' disabled')+'>Добавить прокси</button>')+'<p>Используются сторонние ретрансляторы: они могут видеть IP и метаданные. Прокси добавляется один раз. Сообщения и медиа; без звонков. После отключения Veyra выключи этот прокси в Telegram, если он мешает прямому подключению.</p></section>'
     if tab=='home':
         body='<header><small>VEYRA / LINUX · BETA</small><h1>Твоя сеть.<br>Под твоим контролем.</h1><p>Одна кнопка для браузера и Telegram.</p></header><section class="card hero"><div><small>ЛОКАЛЬНОЕ ПОДКЛЮЧЕНИЕ</small><h2 id="status">'+('Обход и Telegram-мост включены' if both else 'Локальный прокси запущен' if running else 'Готов к подключению')+'</h2><p>'+escape(profile_names[state['profile']])+'</p>'+connect+'</div><div class="detail"><span class="shield">◇</span><p id="address">'+escape(address)+'</p><small>'+('Telegram · 127.0.0.1:'+str(tg['port']) if tg['running'] else 'Telegram ждёт запуска')+'</small></div></section><div class="row tools">'+form(token,'refresh',tab,'<button>↻ Обновить</button>')+form(token,'ping',tab,'<button'+('' if running else ' disabled')+'>⌁ Пинг</button>')+browser+'</div><p>'+escape(state['ping'])+'</p>'+('<p class="error">'+escape(state['browser_warning'])+'</p>' if state['browser_warning'] else '')+tgcard+'<section class="card"><h2>Не системный VPN</h2><p>При подключении открывается отдельное окно Chromium, Chrome или Firefox с SOCKS5 и выключенным QUIC/HTTP3. Настройки основного браузера, маршруты и firewall не меняются. Другие приложения автоматически не переключаются. Внешний IP не меняется; региональные ограничения ChatGPT не снимаются.</p></section>'
     elif tab=='strategies':
@@ -252,9 +261,9 @@ def page(controller,token,tab='home',message='',failed=False):
         body='<h1>Настройки</h1>'+tgcard+'<section class="card"><h2>Диагностика</h2><p>Локальные журналы engine.log и browser.log. Проверь содержимое перед отправкой. Ключ Telegram не включается в отчёт.</p><a class="button" href="/diagnostics.txt" download="Veyra-diagnostics.txt">Сохранить журнал</a></section><section class="card"><h2>Завершение</h2><p>Закрытие вкладки не останавливает Veyra. Кнопка ниже завершает только собственный прокси и мост.</p>'+form(token,'exit',tab,'<button>Завершить Veyra</button>')+'</section><a class="button" href="https://github.com/nosmokee/Veyra-zapret" target="_blank" rel="noopener noreferrer">GitHub · Veyra ↗</a>'
     elif tab=='telegram':body='<h1>Telegram</h1>'+tgcard
     elif tab=='personal':
-        body='<h1>Оформление</h1><section class="card"><p>Veyra 1.1 использует тёмную янтарную тему.</p></section>'
+        body='<h1>Оформление</h1><section class="card"><p>Veyra 1.2 использует тёмную янтарную тему.</p></section>'
     else:
-        body='<h1>О приложении</h1><section class="card"><h2>Veyra 1.1 Beta</h2><p>by Nosmoke · @recobalt</p><p>Локальный SOCKS5 на базе hufrea/ByeDPI и MTProxy → Telegram WSS с проверкой TLS; CDN203 подключается к собственному серверу через MTProto TCP. Не удалённый VPN, без смены IP. Пароли и учётная запись Telegram не требуются.</p><p>Python 3.9+, Chromium/Chrome/Firefox. Лицензии: LICENSE и LICENSES. x86_64 и aarch64; платформенные ограничения и результаты проверок находятся в TEST-REPORT.md.</p></section>'
+        body='<h1>О приложении</h1><section class="card"><h2>Veyra 1.2</h2><p>by Nosmoke · @recobalt</p><p>Локальный SOCKS5 на базе hufrea/ByeDPI и локальный Telegram-прокси. Не удалённый VPN, без смены IP. Пароли и учётная запись Telegram не требуются.</p><p>Python 3.10+, Chromium/Chrome/Firefox. Лицензии: LICENSE и LICENSES. x86_64 и aarch64; платформенные ограничения и результаты проверок находятся в TEST-REPORT.md.</p></section>'
     nav=''.join('<a href="/?tab='+key+'"'+(' class="active" aria-current="page"' if key==tab else '')+'>'+name+'</a>' for key,name in TABS.items())
     notice=message or state['error']
     template=(BASE/'ui.html').read_text(encoding='utf8')
@@ -284,7 +293,7 @@ def handler(controller, token):
             if path.path=='/favicon.ico':return self.send_data(204,b'','image/x-icon')
             if path.path=='/api/state':return self.send_data(200,controller.state())
             if path.path=='/diagnostics.txt':
-                report='Veyra Linux '+VERSION+'\n'+platform.system()+' '+platform.release()+' / '+platform.machine()+'\n'+json.dumps(controller.state(),ensure_ascii=False,indent=2)+'\n--- engine.log (tail) ---\n'+controller.log_tail()
+                report='Veyra Linux '+VERSION+'\n'+platform.system()+' '+platform.release()+' / '+platform.machine()+'\n'+json.dumps(controller.state(),ensure_ascii=False,indent=2)+'\n--- engine.log (tail) ---\n'+controller.log_tail()+'\n--- Flowseal engine (redacted) ---\n'+(controller.bridge.diagnostics() if controller.bridge else controller.telegram_log)
                 return self.send_data(200,report.encode(),'text/plain; charset=utf-8')
             return self.send_data(404,{'error':'Не найдено'})
         def do_POST(self):

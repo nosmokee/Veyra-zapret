@@ -8,3 +8,5 @@ Service state/lifecycle, native cleanup ownership and local connection diagnosti
 Persistent diagnostic report, clipboard action, bounded export and staged HTTPS errors added in 0.1.3.
 Opt-in SNI/TCP compatibility profile and selective UDP/443 suppression added in 0.1.4. Native engine modified; original attribution retained.
 Native first-response error handling preserves receive errno before logging and handles EOF separately.
+
+Telegram engine: Flowseal/tg-ws-proxy v1.11.2 (MIT), upstream commit 307a384ab7f522e34bb1a045884d0bd90f40bee5. CF community relays are enabled, may observe IP/metadata. Python runtime: Chaquopy (MIT), Python 3.13 (PSF).

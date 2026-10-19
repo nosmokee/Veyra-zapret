@@ -18,8 +18,8 @@ class UnifiedConnectionTest {
  private val context get()=ApplicationProvider.getApplicationContext<Application>()
  private val prefs get()=context.getPreferences()
  private val owner=Any()
- @Before fun setup(){prefs.edit().clear().commit();context.getSharedPreferences("telegram_local",Context.MODE_PRIVATE).edit().clear().commit()}
- @After fun cleanup(){TelegramRuntime.stop(owner)}
+ @Before fun setup(){TestTelegramBackend.install();prefs.edit().clear().commit();context.getSharedPreferences("telegram_local",Context.MODE_PRIVATE).edit().clear().commit()}
+ @After fun cleanup(){TelegramRuntime.stop(owner);TestTelegramBackend.reset()}
  @Test fun firstConnectContainsBaseYoutubeQuicAndTelegram(){UnifiedConnection.prepare(prefs);assertEquals(VeyraPresets.YOUTUBE_COMMAND,prefs.getString("byedpi_cmd_args",null));assertTrue(prefs.getBoolean("byedpi_enable_cmd_settings",false));assertTrue(prefs.getBoolean("veyra_block_quic",false));assertTrue(prefs.getBoolean("veyra_telegram_enabled",false));assertEquals("127.0.0.1",prefs.getString("byedpi_proxy_ip",null));assertEquals("1080",prefs.getString("byedpi_proxy_port",null))}
  @Test fun everyConnectReenablesBothEvenAfterOldModuleOff(){repeat(3){prefs.edit().putBoolean("veyra_telegram_enabled",false).putBoolean("veyra_block_quic",false).commit();UnifiedConnection.prepare(prefs);assertTrue(prefs.getBoolean("veyra_telegram_enabled",false));assertTrue(prefs.getBoolean("veyra_block_quic",false))}}
  @Test fun explicitAltSurvivesAndAlsoStartsTelegram(){for(p in VeyraPresets.entries){prefs.edit().putBoolean("byedpi_enable_cmd_settings",true).putString("byedpi_cmd_args",p.command).commit();repeat(2){UnifiedConnection.prepare(prefs);assertEquals(p.command,prefs.getString("byedpi_cmd_args",null));assertTrue(prefs.getBoolean("veyra_telegram_enabled",false));assertFalse(prefs.getBoolean("veyra_block_quic",true))}}}

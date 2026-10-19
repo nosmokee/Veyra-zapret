@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.test.core.app.ApplicationProvider
 import io.github.dovecoteescapee.byedpi.R
+import io.github.dovecoteescapee.byedpi.core.TestTelegramBackend
 import io.github.dovecoteescapee.byedpi.core.VeyraPresets
 import io.github.dovecoteescapee.byedpi.data.Mode
 import io.github.dovecoteescapee.byedpi.services.*
@@ -30,8 +31,8 @@ import org.robolectric.shadows.ShadowToast
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class DashboardInteractionTest {
  private val app get()=ApplicationProvider.getApplicationContext<Application>()
- @Before fun before(){shadowOf(app).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS);setPhase(ConnectionPhase.Stopped,Mode.VPN);app.getPreferences().edit().clear().putString("app_theme","dark").putBoolean("byedpi_enable_cmd_settings",true).putString("byedpi_cmd_args",VeyraPresets.YOUTUBE_COMMAND).putBoolean("veyra_block_quic",true).putBoolean("veyra_telegram_enabled",true).commit()}
- @After fun after(){setPhase(ConnectionPhase.Stopped,Mode.VPN)}
+ @Before fun before(){TestTelegramBackend.install();shadowOf(app).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS);setPhase(ConnectionPhase.Stopped,Mode.VPN);app.getPreferences().edit().clear().putString("app_theme","dark").putBoolean("byedpi_enable_cmd_settings",true).putString("byedpi_cmd_args",VeyraPresets.YOUTUBE_COMMAND).putBoolean("veyra_block_quic",true).putBoolean("veyra_telegram_enabled",true).commit()}
+ @After fun after(){TestTelegramBackend.reset();setPhase(ConnectionPhase.Stopped,Mode.VPN)}
  private fun run(block:(MainActivity)->Unit){val c=Robolectric.buildActivity(MainActivity::class.java).setup();try{shadowOf(Looper.getMainLooper()).idle();block(c.get())}finally{c.pause().stop().destroy()}}
  private fun MainActivity.click(id:Int){findViewById<View>(id).performClick();shadowOf(Looper.getMainLooper()).idle()}
  private fun MainActivity.row(index:Int)=findViewById<LinearLayout>(R.id.strategy_list).getChildAt(index)

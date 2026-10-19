@@ -1,4 +1,5 @@
 plugins {
+    id("com.chaquo.python")
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
@@ -15,17 +16,15 @@ android {
             "io.github.nosmokee.veyra.next.unifiedtest" else "io.github.nosmokee.veyra.next"
         manifestPlaceholders["veyraAppLabel"] = if (project.hasProperty("veyraIsolatedTest"))
             "Veyra Test" else "@string/app_name"
-        minSdk = 21
+        minSdk = 24
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.1-beta.2-fix.1"
+        versionCode = 17
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters.add("armeabi-v7a")
             abiFilters.add("arm64-v8a")
-            abiFilters.add("x86")
             abiFilters.add("x86_64")
         }
     }
@@ -134,4 +133,13 @@ tasks.register<JavaExec>("verifyConnectionPing") {
         layout.buildDirectory.dir("intermediates/javac/debugUnitTest/classes"))
     mainClass.set("io.github.dovecoteescapee.byedpi.core.ConnectionPingLive")
     if (project.hasProperty("veyraSocksPort")) args(project.property("veyraSocksPort").toString())
+}
+
+chaquopy {
+    sourceSets { getByName("main") { srcDir("../../telegram-engine"); exclude("python-libs/**", "__pycache__/**", "**/__pycache__/**", "*.pyc") } }
+    defaultConfig {
+        version = "3.13"
+        buildPython("python3.13")
+        pip { install("httpx[http2]==0.28.1"); install("-r", "../../telegram-engine/requirements.txt") }
+    }
 }

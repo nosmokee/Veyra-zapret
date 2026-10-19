@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.logs_failed, Toast.LENGTH_LONG).show()
                 } else {
                     // The file picker may recreate the activity: load the report from persistent storage.
-                    val report = savedReport()+"\n\n--- Telegram events (bounded; no proxy keys/payloads) ---\n"+io.github.dovecoteescapee.byedpi.core.TgDiagnostics.snapshot()
+                    val report = savedReport()+"\n\n--- Telegram events (bounded; no proxy keys/payloads) ---\n"+io.github.dovecoteescapee.byedpi.core.TgDiagnostics.snapshot()+"\n\n--- Flowseal engine ---\n"+(TelegramRuntime.bridge?.diagnostics()?:"")
                     lifecycleScope.launch {
                         val outcome = withContext(Dispatchers.IO) {
                             runCatching {
@@ -311,7 +311,7 @@ class MainActivity : AppCompatActivity() {
         if(snapshot.mode!=Mode.VPN){upRate="— B/s";downRate="— B/s";return}
         val values=withContext(Dispatchers.IO){runCatching {TProxyService.TProxyGetStats()}.getOrNull()}
         if(connectionState.value!=snapshot)return
-        val result=if(values!=null && values.size>=4)rates.sample(values[1],values[3],System.nanoTime()) else null
+        val result=if(values!=null && values.size>=4)rates.sample(values[1]+(TelegramRuntime.bridge?.up?.get()?:0L),values[3]+(TelegramRuntime.bridge?.down?.get()?:0L),System.nanoTime()) else null
         upRate=result?.first?.let {DashboardFormatting.bytes(it)+"/s"} ?: "— B/s"
         downRate=result?.second?.let {DashboardFormatting.bytes(it)+"/s"} ?: "— B/s"
     }

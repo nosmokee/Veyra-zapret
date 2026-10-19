@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/Flowseal/tg-ws-proxy",
+  "tag": "v1.11.2",
+  "commit": "307a384ab7f522e34bb1a045884d0bd90f40bee5",
+  "license": "MIT",
+  "changes": [
+    "Android AES-CTR provider adapter only; protocol, routing, framing and H2 are upstream.",
+    "Lifecycle/log redaction/IPC implemented in separate Veyra modules."
+  ]
+}

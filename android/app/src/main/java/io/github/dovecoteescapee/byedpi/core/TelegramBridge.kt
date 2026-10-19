@@ -50,8 +50,11 @@ object TgWire {
     fun candidates(dc:Int,media:Boolean,cached:Pair<String,String>?=null):List<Pair<String,String>> {
         val normal=hosts(dc,media).flatMap {h->addresses(dc,h).map {a->h to a}}
         val main="kws$dc.web.telegram.org"
+        // Recovery: the user's network cannot connect to the DNS-only routes.
+        // Restore the previous official Telegram edge; preserve TLS and signed DC identity.
         val preferred=if(dc==2||dc==4)listOf(main to "149.154.167.220",main to main) else emptyList()
-        return (preferred+listOfNotNull(cached)+normal).distinct()
+        val validCache=cached?.takeIf {it in normal}
+        return (preferred+listOfNotNull(validCache)+normal).distinct()
     }
     fun addresses(dc: Int,host: String) = if(dc==2 || dc==4) listOf(host,"149.154.167.220") else listOf(host)
 }
@@ -97,9 +100,9 @@ interface TgSocket:Closeable { fun send(data: ByteArray);fun receive(): ByteArra
 /** Bounded, payload/key-free Telegram events, independent of noisy native logcat. */
 object TgDiagnostics {
     private val events=java.util.ArrayDeque<String>()
-    @Synchronized fun record(text:String) {while(events.size>=256)events.removeFirst();events.addLast("${System.currentTimeMillis()} $text")}
+    @Synchronized fun record(text:String) {while(events.size>=256)events.removeFirst();events.addLast("${System.currentTimeMillis()} ${text.take(1200)}")}
     @Synchronized fun snapshot():String = events.joinToString("\n").ifEmpty {"Telegram events: none in this process"}
-    fun describe(error:Throwable):String {val parts=mutableListOf<String>();var e:Throwable?=error;repeat(6){val current=e ?: return parts.joinToString(" <- ");parts+=current.javaClass.simpleName;e=current.cause};return parts.joinToString(" <- ")}
+    fun describe(error:Throwable):String {val parts=mutableListOf<String>();var e:Throwable?=error;repeat(6){val current=e ?: return parts.joinToString(" <- ");parts+=current.javaClass.simpleName + when(current){is TgSocksException->" stage=${current.stage} version=${current.version} reply=${current.reply}";is TgWsCloseException->" status=${current.status}";else->""};e=current.cause};return parts.joinToString(" <- ")}
 }
 
 /** Raw obfuscated MTProto is end-to-end authenticated by Telegram, NOT TLS/WSS.
@@ -115,9 +118,9 @@ class TgTcpSocket private constructor(private val socket:Socket):TgSocket {
                 raw.tcpNoDelay=true;raw.keepAlive=true;raw.soTimeout=7000
                 raw.connect(InetSocketAddress(if(proxyPort==null)address else "127.0.0.1",proxyPort ?: port),5000)
                 if(proxyPort!=null) {
-                    val o=raw.getOutputStream();val i=raw.getInputStream();o.write(byteArrayOf(5,1,0));check(TgWire.exact(i,2).contentEquals(byteArrayOf(5,0)))
+                    val o=raw.getOutputStream();val i=raw.getInputStream();o.write(byteArrayOf(5,1,0));val greeting=TgWire.exact(i,2);if(!greeting.contentEquals(byteArrayOf(5,0)))throw TgSocksException("greeting",greeting[0].toInt() and 255,greeting[1].toInt() and 255)
                     val name=address.toByteArray(Charsets.US_ASCII);o.write(byteArrayOf(5,1,0,3,name.size.toByte())+name+byteArrayOf((port ushr 8).toByte(),port.toByte()))
-                    val reply=TgWire.exact(i,4);check(reply[0]==5.toByte()&&reply[1]==0.toByte()) {"SOCKS CONNECT failed"}
+                    val reply=TgWire.exact(i,4);if(reply[0]!=5.toByte()||reply[1]!=0.toByte())throw TgSocksException("connect",reply[0].toInt() and 255,reply[1].toInt() and 255)
                     val n=when(reply[3].toInt()){1->4;4->16;3->TgWire.exact(i,1)[0].toInt() and 255;else->error("SOCKS address")};TgWire.exact(i,n+2)
                 }
                 raw.soTimeout=0;return TgTcpSocket(raw)
@@ -138,9 +141,9 @@ class TgWebSocket private constructor(private val socket: Socket):TgSocket {
                 track(raw);raw.tcpNoDelay=true;raw.keepAlive=true;raw.soTimeout=7000
                 raw.connect(InetSocketAddress(if(proxyPort==null) address else "127.0.0.1",proxyPort ?: 443),5000)
                 if(proxyPort!=null) {
-                    val o=raw.getOutputStream();val i=raw.getInputStream();o.write(byteArrayOf(5,1,0));check(TgWire.exact(i,2).contentEquals(byteArrayOf(5,0)))
+                    val o=raw.getOutputStream();val i=raw.getInputStream();o.write(byteArrayOf(5,1,0));val greeting=TgWire.exact(i,2);if(!greeting.contentEquals(byteArrayOf(5,0)))throw TgSocksException("greeting",greeting[0].toInt() and 255,greeting[1].toInt() and 255)
                     val name=address.toByteArray(Charsets.US_ASCII);o.write(byteArrayOf(5,1,0,3,name.size.toByte())+name+byteArrayOf(1,0xbb.toByte()))
-                    val reply=TgWire.exact(i,4);check(reply[0]==5.toByte()&&reply[1]==0.toByte()) { "SOCKS CONNECT failed" }
+                    val reply=TgWire.exact(i,4);if(reply[0]!=5.toByte()||reply[1]!=0.toByte())throw TgSocksException("connect",reply[0].toInt() and 255,reply[1].toInt() and 255)
                     val n=when(reply[3].toInt()) {1->4;4->16;3->TgWire.exact(i,1)[0].toInt() and 255;else->error("SOCKS address")};TgWire.exact(i,n+2)
                 }
                 val tls=(SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(raw,host,443,true) as SSLSocket
@@ -180,7 +183,7 @@ class TgWebSocket private constructor(private val socket: Socket):TgSocket {
             if(len==126L) {val e=TgWire.exact(input,2);len=((e[0].toInt() and 255)*256+(e[1].toInt() and 255)).toLong()} else if(len==127L) {len=0;for(c in TgWire.exact(input,8))len=(len shl 8) or (c.toLong() and 255)}
             check(len in 0..TgWire.MAX.toLong() && (op<8 || (fin && len<=125))) { "WS frame limit" }
             val data=TgWire.exact(input,len.toInt())
-            when(op) {8->{check(data.size!=1);if(data.size>=2)check((data[0].toInt() and 255)*256+(data[1].toInt() and 255)==1000) { "WS close" };return null};9->{frame(10,data);continue};10->continue}
+            when(op) {8->{check(data.size!=1);if(data.size>=2){val status=(data[0].toInt() and 255)*256+(data[1].toInt() and 255);TgDiagnostics.record("WS close status=$status");if(status!=1000)throw TgWsCloseException(status)};return null};9->{frame(10,data);continue};10->continue}
             if(op==2 && !started)started=true else check(op==0 && started) { "WS message order" }
             check(message.size()+data.size<=TgWire.MAX);message.write(data);if(fin)return message.toByteArray()
         }
@@ -219,12 +222,14 @@ class TelegramBridge(private val secret: ByteArray,private val dial:(Int,Boolean
         pool.execute {try{while(live.get()){val client=server.accept();if(!live.get()||clients.size>=32){client.close();continue};clients.add(client);try{pool.execute {serve(client)}}catch(_:RejectedExecutionException){clients.remove(client);client.close()}}}catch(e:Exception){if(live.get()){error="Telegram listener: ${e.javaClass.simpleName}";close()}}}
         timer.scheduleWithFixedDelay({for(ws in remotes)try{ws.ping()}catch(_:Exception){runCatching{ws.close()}}},25,25,TimeUnit.SECONDS)
     }
+    private val sessionSequence=AtomicLong()
     private fun serve(client:Socket) {
-        var remote:TgSocket?=null;var sessionDc=0;var phase="hello"
+        val sid=sessionSequence.incrementAndGet();val sessionUp=AtomicLong();val sessionDown=AtomicLong()
+        var remote:TgSocket?=null;var sessionDc=0;var phase="hello";var observer:TgPacketObserver?=null
         val started=System.nanoTime()
         try {
             client.tcpNoDelay=true;client.soTimeout=8000;val input=BufferedInputStream(client.getInputStream(),65536);val hello=TgWire.exact(input,64);val info=TgWire.decode(hello,secret);client.soTimeout=0
-            sessionDc=info.dc;TgDiagnostics.record("CLIENT dc=${info.dc} protocol=${info.protocol.toUInt().toString(16)}");phase="connect"
+            sessionDc=info.dc;observer=TgPacketObserver(info.protocol){event->TgDiagnostics.record("UPSTREAM sid=$sid dc=$sessionDc $event")};TgDiagnostics.record("CLIENT sid=$sid dc=${info.dc} protocol=${info.protocol.toUInt().toString(16)}");phase="connect"
             val dc=kotlin.math.abs(info.dc);val relay=TgWire.relay(info.dc,info.protocol);val ws=dial(dc,info.dc<0);remote=ws
             if(!live.get())return
             remotes.add(ws);ws.send(relay);sessions.incrementAndGet();error="";phase="upload";TgDiagnostics.record("CONNECTED dc=$sessionDc elapsedMs=${(System.nanoTime()-started)/1_000_000}")
@@ -232,13 +237,13 @@ class TelegramBridge(private val secret: ByteArray,private val dial:(Int,Boolean
             val reverse=hello.copyOfRange(8,56).reversedArray();val cw=TgCtr(TgWire.hash(reverse.copyOfRange(0,32),secret),reverse.copyOfRange(32,48))
             val rw=TgCtr(relay.copyOfRange(8,40),relay.copyOfRange(40,56));rw.apply(ByteArray(64))
             val rev=relay.copyOfRange(8,56).reversedArray();val rr=TgCtr(rev.copyOfRange(0,32),rev.copyOfRange(32,48))
-            pool.execute {try{while(live.get()){val b=ws.receive() ?: break;val encoded=cw.apply(rr.apply(b));client.getOutputStream().write(encoded);down.addAndGet(b.size.toLong())}}catch(e:Exception){if(live.get()&&!client.isClosed){error="Telegram receive dc=$sessionDc: ${TgDiagnostics.describe(e)}";TgDiagnostics.record(error);report(error)}}finally{runCatching{client.close()};runCatching{ws.close()}}}
+            pool.execute {try{while(live.get()){val b=ws.receive();if(b==null){TgDiagnostics.record("UPSTREAM EOF sid=$sid dc=$sessionDc");break};val plain=rr.apply(b);observer?.accept(plain);val encoded=cw.apply(plain);client.getOutputStream().write(encoded);down.addAndGet(b.size.toLong());sessionDown.addAndGet(b.size.toLong())}}catch(e:Exception){if(live.get()&&!client.isClosed){error="Telegram receive sid=$sid dc=$sessionDc: ${TgDiagnostics.describe(e)}";TgDiagnostics.record(error);report(error)}}finally{runCatching{client.close()};runCatching{ws.close()}}}
             while(live.get()) {
                 var head=cr.apply(TgWire.exact(input,if(info.protocol==0xefefefef.toInt())1 else 4))
                 val n=if(info.protocol==0xefefefef.toInt()) {val first=head[0].toInt() and 255;if(first==127||first==255){val tail=cr.apply(TgWire.exact(input,3));head+=tail;((tail[0].toInt() and 255) or ((tail[1].toInt() and 255) shl 8) or ((tail[2].toInt() and 255) shl 16))*4}else(first and 127)*4} else TgWire.le(head) and 0x7fffffff
-                check(n in 1..TgWire.MAX);val b=head+cr.apply(TgWire.exact(input,n));ws.send(rw.apply(b));up.addAndGet(b.size.toLong())
+                check(n in 1..TgWire.MAX);val b=head+cr.apply(TgWire.exact(input,n));ws.send(rw.apply(b));up.addAndGet(b.size.toLong());sessionUp.addAndGet(b.size.toLong())
             }
-        }catch(e:Exception){if(live.get()&&!client.isClosed && e !is EOFException){error="Telegram dc=$sessionDc phase=$phase: ${TgDiagnostics.describe(e)}";TgDiagnostics.record(error);report(error)}}finally{TgDiagnostics.record("END dc=$sessionDc phase=$phase elapsedMs=${(System.nanoTime()-started)/1_000_000}");clients.remove(client);runCatching{client.close()};remote?.let {remotes.remove(it);runCatching{it.close()}}}
+        }catch(e:Exception){if(live.get()&&!client.isClosed && e !is EOFException){error="Telegram sid=$sid dc=$sessionDc phase=$phase: ${TgDiagnostics.describe(e)}";TgDiagnostics.record(error);report(error)}}finally{TgDiagnostics.record("END sid=$sid dc=$sessionDc phase=$phase bytes-up=${sessionUp.get()} bytes-down=${sessionDown.get()} elapsedMs=${(System.nanoTime()-started)/1_000_000}");clients.remove(client);runCatching{client.close()};remote?.let {remotes.remove(it);runCatching{it.close()}}}
     }
     @Synchronized override fun close() {
         live.set(false);runCatching{listener?.close()};listener=null

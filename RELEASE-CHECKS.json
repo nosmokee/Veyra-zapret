@@ -1,0 +1,27 @@
+{
+  "version": "1.2",
+  "transport": "unchanged from confirmed 1.1-beta.2-flowseal.1",
+  "user_confirmation": "integrated candidate works, including phone",
+  "android_version_code": 17,
+  "native_windows_execution_by_agent": false,
+  "native_android_execution_by_agent": false,
+  "linux_arm64_execution_by_agent": false,
+  "android_jvm": {
+    "tests": 89,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "linux_tests": {
+    "tests": 39,
+    "failures": 0
+  },
+  "anonymous_mtproto": {
+    "passes": 24,
+    "cycles": 3,
+    "authenticated_media_test": false
+  },
+  "ui_regression": "no Telegram toggle button; add-proxy only",
+  "windows": "Release x64 compilation successful",
+  "core_transport": "unchanged from user-confirmed candidate"
+}
