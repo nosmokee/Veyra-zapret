@@ -6,8 +6,8 @@ import org.junit.Test
 class VeyraPresetsTest {
  @Test fun presetsAreDistinctAndLocal() {
   val presets = VeyraPresets.entries
-  assertEquals(4, presets.size)
-  assertEquals(4, presets.map { it.command }.toSet().size)
+  assertEquals(9, presets.size)
+  assertEquals(9, presets.map { it.command }.toSet().size)
   presets.forEach {
    val args = ByeDpiProxyCmdPreferences(it.command).args.toList()
    assertEquals("ciadpi", args.first())
@@ -18,6 +18,6 @@ class VeyraPresetsTest {
  }
  @Test fun tlsIsOptionalAndExplicit() {
   assertTrue(VeyraPresets.entries.take(3).all { it.command.contains("--tlsrec 1") })
-  assertFalse(VeyraPresets.entries.last().command.contains("--tlsrec"))
+  assertFalse(VeyraPresets.entries[3].command.contains("--tlsrec"))
  }
 }

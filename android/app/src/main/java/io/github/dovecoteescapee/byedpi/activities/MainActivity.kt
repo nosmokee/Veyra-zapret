@@ -254,15 +254,15 @@ class MainActivity : AppCompatActivity() {
     private fun profileName():String=profileIndex().let {if(it<0)getString(R.string.ui_custom) else dashboard.names[it]}
 
     private fun selectStrategy(index:Int) {
-        if(index !in 0..4)return
+        if(index !in 0..VeyraPresets.entries.size)return
         if(appStatus.first!=AppStatus.Halted || connectionState.value.busy){Toast.makeText(this,R.string.ui_strategy_locked,Toast.LENGTH_SHORT).show();return}
         MaterialAlertDialogBuilder(this).setTitle(dashboard.names[index]).setMessage(R.string.ui_strategy_warning)
             .setPositiveButton(R.string.ui_apply) {_,_->
                 if(appStatus.first==AppStatus.Halted && !connectionState.value.busy) {
-                    val command=if(index==0)VeyraPresets.YOUTUBE_COMMAND else VeyraPresets.entries[index-1].command
+                    val command=if(index==0)VeyraPresets.BASE_COMMAND else VeyraPresets.entries[index-1].command
                     getPreferences().edit().putString("byedpi_mode","vpn").putString("byedpi_proxy_ip","127.0.0.1")
                         .putString("byedpi_proxy_port","1080").putBoolean("byedpi_enable_cmd_settings",true)
-                        .putString("byedpi_cmd_args",command).putBoolean("veyra_block_quic",index==0).apply()
+                        .putInt("veyra_base_revision",13).putString("byedpi_cmd_args",command).putBoolean("veyra_block_quic",VeyraPresets.blocksQuic(index)).apply()
                     pingLabel=null;updateStatus();dashboard.showPage("home")
                     Toast.makeText(this,R.string.ui_strategy_saved,Toast.LENGTH_SHORT).show()
                 }

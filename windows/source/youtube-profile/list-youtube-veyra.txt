@@ -1,0 +1,12 @@
+youtube.com
+youtu.be
+googlevideo.com
+ytimg.com
+ggpht.com
+youtube-nocookie.com
+youtubei.googleapis.com
+youtube.googleapis.com
+youtubeembeddedplayer.googleapis.com
+wide-youtube.l.google.com
+youtube-ui.l.google.com
+youtubeembeddedplayer.googleapis.com

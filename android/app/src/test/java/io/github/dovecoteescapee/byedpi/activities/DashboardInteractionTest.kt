@@ -31,7 +31,7 @@ import org.robolectric.shadows.ShadowToast
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class DashboardInteractionTest {
  private val app get()=ApplicationProvider.getApplicationContext<Application>()
- @Before fun before(){TestTelegramBackend.install();shadowOf(app).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS);setPhase(ConnectionPhase.Stopped,Mode.VPN);app.getPreferences().edit().clear().putString("app_theme","dark").putBoolean("byedpi_enable_cmd_settings",true).putString("byedpi_cmd_args",VeyraPresets.YOUTUBE_COMMAND).putBoolean("veyra_block_quic",true).putBoolean("veyra_telegram_enabled",true).commit()}
+ @Before fun before(){TestTelegramBackend.install();shadowOf(app).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS);setPhase(ConnectionPhase.Stopped,Mode.VPN);app.getPreferences().edit().clear().putInt("veyra_base_revision",13).putString("app_theme","dark").putBoolean("byedpi_enable_cmd_settings",true).putString("byedpi_cmd_args",VeyraPresets.BASE_COMMAND).putBoolean("veyra_block_quic",true).putBoolean("veyra_telegram_enabled",true).commit()}
  @After fun after(){TestTelegramBackend.reset();setPhase(ConnectionPhase.Stopped,Mode.VPN)}
  private fun run(block:(MainActivity)->Unit){val c=Robolectric.buildActivity(MainActivity::class.java).setup();try{shadowOf(Looper.getMainLooper()).idle();block(c.get())}finally{c.pause().stop().destroy()}}
  private fun MainActivity.click(id:Int){findViewById<View>(id).performClick();shadowOf(Looper.getMainLooper()).idle()}
@@ -71,23 +71,45 @@ class DashboardInteractionTest {
   a.click(R.id.nav_settings);assertEquals(View.VISIBLE,a.findViewById<View>(R.id.settings_page).visibility)
   a.click(R.id.nav_home);a.click(R.id.refresh_button)
   assertEquals("Состояние обновлено",ShadowToast.getTextOfLatestToast())
-  assertEquals(VeyraPresets.YOUTUBE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
+  assertEquals(VeyraPresets.BASE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
   assertTrue(app.getPreferences().getBoolean("veyra_telegram_enabled",false));assertEquals(ConnectionPhase.Stopped,connectionState.value.phase)
  }
  @Test fun pingWhileDisconnectedOnlyExplainsRequirement()=run{a->a.click(R.id.ping_button);assertEquals(a.getString(R.string.ui_ping_none),ShadowToast.getTextOfLatestToast());assertEquals(ConnectionPhase.Stopped,connectionState.value.phase)}
  @Test fun selectionRequiresConfirmationAndNeverStartsService()=run{a->
   a.click(R.id.nav_strategies);a.row(2).performClick();val dialog=ShadowDialog.getLatestDialog() as AlertDialog
   modal("strategy-dialog",dialog)
-  assertEquals(VeyraPresets.YOUTUBE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
+  assertEquals(VeyraPresets.BASE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
   dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle()
   assertEquals(VeyraPresets.entries[1].command,app.getPreferences().getString("byedpi_cmd_args",null));assertFalse(app.getPreferences().getBoolean("veyra_block_quic",true))
   assertTrue(app.getPreferences().getBoolean("veyra_telegram_enabled",false));assertEquals(ConnectionPhase.Stopped,connectionState.value.phase)
   assertEquals("Veyra Alt 2",a.findViewById<TextView>(R.id.selected_profile).text.toString())
  }
- @Test fun cancellingSelectionLeavesBaseIntact()=run{a->a.click(R.id.nav_strategies);a.row(1).performClick();(ShadowDialog.getLatestDialog() as AlertDialog).getButton(DialogInterface.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertEquals(VeyraPresets.YOUTUBE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))}
+ @Test fun youtubeTcpIsVisibleAndSelectionEnablesQuicBlocking()=run{a->
+  a.click(R.id.nav_strategies)
+  assertEquals(10,a.findViewById<LinearLayout>(R.id.strategy_list).childCount)
+  a.row(5).performClick()
+  (ShadowDialog.getLatestDialog() as AlertDialog).getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+  shadowOf(Looper.getMainLooper()).idle()
+  assertEquals(VeyraPresets.YOUTUBE_TCP_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
+  assertTrue(app.getPreferences().getBoolean("veyra_block_quic",false))
+  assertEquals("YouTube TCP · test",a.findViewById<TextView>(R.id.selected_profile).text.toString())
+  assertEquals(ConnectionPhase.Stopped,connectionState.value.phase)
+ }
+ @Test fun wifiSelectionAllowsQuicAndPersistsOnConnect()=run{a->
+  a.click(R.id.nav_strategies);a.row(6).performClick()
+  (ShadowDialog.getLatestDialog() as AlertDialog).getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+  shadowOf(Looper.getMainLooper()).idle()
+  assertEquals(VeyraPresets.YOUTUBE_WIFI_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
+  assertFalse(app.getPreferences().getBoolean("veyra_block_quic",true))
+  assertEquals("YouTube Wi-Fi · QUIC",a.findViewById<TextView>(R.id.selected_profile).text.toString())
+  io.github.dovecoteescapee.byedpi.core.UnifiedConnection.prepare(app.getPreferences())
+  assertFalse(app.getPreferences().getBoolean("veyra_block_quic",true))
+  assertEquals(VeyraPresets.YOUTUBE_WIFI_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
+ }
+ @Test fun cancellingSelectionLeavesBaseIntact()=run{a->a.click(R.id.nav_strategies);a.row(1).performClick();(ShadowDialog.getLatestDialog() as AlertDialog).getButton(DialogInterface.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertEquals(VeyraPresets.BASE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))}
  @Test fun activeConnectionRejectsProfileAndAdvancedChanges()=run{a->
   setPhase(ConnectionPhase.Running,Mode.Proxy);update(a);a.click(R.id.nav_strategies);a.row(3).performClick()
-  assertEquals(a.getString(R.string.ui_strategy_locked),ShadowToast.getTextOfLatestToast());assertEquals(VeyraPresets.YOUTUBE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
+  assertEquals(a.getString(R.string.ui_strategy_locked),ShadowToast.getTextOfLatestToast());assertEquals(VeyraPresets.BASE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
   a.click(R.id.nav_settings);assertFalse(a.findViewById<View>(R.id.advanced_button).isEnabled)
  }
  @Test fun refreshDoesNotOverwriteCustomInputButShowsPlannedBase()=run{a->
@@ -104,8 +126,8 @@ class DashboardInteractionTest {
   app.getPreferences().edit().remove("byedpi_cmd_args").putBoolean("byedpi_enable_cmd_settings",false).putBoolean("veyra_telegram_enabled",false).commit()
   org.robolectric.shadows.ShadowVpnService.setPrepareResult(null)
   a.click(R.id.status_button)
-  assertEquals(VeyraPresets.YOUTUBE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
-  assertTrue(app.getPreferences().getBoolean("veyra_block_quic",false));assertTrue(app.getPreferences().getBoolean("veyra_telegram_enabled",false))
+  assertEquals(VeyraPresets.BASE_COMMAND,app.getPreferences().getString("byedpi_cmd_args",null))
+  assertFalse(app.getPreferences().getBoolean("veyra_block_quic",true));assertTrue(app.getPreferences().getBoolean("veyra_telegram_enabled",false))
   assertEquals(ConnectionPhase.Starting,connectionState.value.phase)
   val intent=shadowOf(a).nextStartedService;assertEquals(ByeDpiVpnService::class.java.name,intent.component!!.className)
   assertEquals(io.github.dovecoteescapee.byedpi.data.START_ACTION,intent.action)

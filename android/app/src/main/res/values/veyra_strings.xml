@@ -1,6 +1,6 @@
 <resources>
 <string name="ui_brand">VEYRA</string>
-<string name="ui_version">1.2 · Android</string>
+<string name="ui_version">1.3 · Android</string>
 <string name="ui_about">О приложении</string>
 <string name="ui_home">Главная</string>
 <string name="ui_strategies">Стратегии</string>
@@ -21,7 +21,7 @@
 <string name="ui_selected">Профиль подключения</string>
 <string name="ui_choose">Выбрать стратегию</string>
 <string name="ui_custom">Своя конфигурация</string>
-<string name="ui_base">Veyra Base · SNI / TCP</string>
+<string name="ui_base">Veyra Base</string>
 <string name="ui_ping_hint">Замер WSS до Telegram через Veyra</string>
 <string name="ui_ping_wait">Измеряем задержку…</string>
 <string name="ui_ping_none">Сначала подключи Veyra</string>
@@ -38,13 +38,13 @@
 <string name="ui_local_note">Локальный обход, не удалённый VPN. Внешний IP не меняется.</string>
 <string name="ui_strategy_intro">Пять локальных профилей. Выбери подходящий для своей сети.</string>
 <string name="ui_strategy_locked">Для смены стратегии сначала отключи Veyra.</string>
-<string name="ui_base_desc">YouTube · SNI / TCP + Telegram-мост</string>
+<string name="ui_base_desc">Профиль по умолчанию · QUIC, 3 фейка + TCP fallback + Telegram</string>
 <string name="ui_alt1_desc">TCP split · TLS record</string>
 <string name="ui_alt2_desc">Disorder · TLS record</string>
 <string name="ui_alt3_desc">TCP split 2 · TLS record</string>
 <string name="ui_alt4_desc">TCP disorder</string>
 <string name="ui_strategy_apply">Применить стратегию?</string>
-<string name="ui_strategy_warning">Профиль сохранится для общей кнопки подключения. Telegram-мост включится автоматически с любым профилем. Base отключает QUIC (UDP/443) для проходящего через Veyra трафика.</string>
+<string name="ui_strategy_warning">Профиль сохранится для общей кнопки подключения. Telegram-мост включится автоматически с любым профилем. Base и YouTube TCP отключают QUIC (UDP/443) для проходящего через Veyra трафика. YouTube TCP — экспериментальный профиль для всех приложений в туннеле; если стало хуже, вернитесь на Base.</string>
 <string name="ui_apply">Применить</string>
 <string name="ui_selected_badge">Выбрана</string>
 <string name="ui_strategy_saved">Стратегия сохранена</string>
@@ -62,4 +62,10 @@
 <string name="ui_tg_disable">Выключить модуль</string>
 <string name="ui_tg_add">Добавить</string>
 <string name="ui_tg_connect_first">Нажми круглый щит «Подключить всё». Telegram-мост запустится сам; после подключения добавь прокси в Telegram один раз.</string><string name="ui_tg_once_title">Telegram · один раз</string><string name="ui_tg_once_message">Обход и Telegram-мост уже запущены. Один раз добавь локальный прокси в Telegram и подтверди его включение. Дальше достаточно общей кнопки в Veyra: адрес и ключ сохраняются. Если прокси уже добавлен, нажми «Позже».</string><string name="ui_later">Позже</string><string name="ui_vpn_consent">Подтверди VPN в системном окне Android</string><string name="ui_github">GitHub · Veyra</string>
+<string name="ui_youtube_tcp_desc">Пробный профиль: TLS record split сразу, затем два резервных способа. QUIC выключен. Воспроизведение зависит от сети.</string>
+<string name="ui_youtube_wifi_desc">Сравнение с YouTube TCP: QUIC разрешён, TCP-параметры те же. Для проверки буферизации через Wi-Fi; работа не гарантируется.</string>
+<string name="ui_youtube_quic_fake_desc">Пробный обход без root: 11 QUIC-фейков с TTL 8 для UDP/443. TCP как в прежнем тесте. Может затрагивать другие приложения с UDP/443; если хуже, верните прежний профиль.</string>
+<string name="ui_youtube_fast_start_desc">Сравнение с QUIC fake: только ожидание TCP-повтора уменьшено с 5 до 2 секунд. QUIC без изменений. На медленной сети может быть хуже; для отката выберите YouTube QUIC · fake.</string>
+<string name="ui_youtube_quic_light_desc">Сравнение с рабочим QUIC fake: 3 фейка вместо 11, остальные параметры прежние (TCP timeout 5 с, TTL 8). Может не обойти DPI в вашей сети. Если хуже — верните YouTube QUIC · fake.</string>
+<string name="ui_legacy_base_desc">Прежний Base 1.2: SNI / TCP, QUIC отключён. Для ручного отката.</string>
 </resources>

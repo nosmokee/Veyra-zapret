@@ -20,8 +20,8 @@ class DashboardUi(private val binding:ActivityMainBinding,private val select:(In
     private val context=binding.root.context
     var page="home";private set
     private var listStamp=""
-    val names=listOf(context.getString(R.string.ui_base))+ (1..4).map {"Veyra Alt $it"}
-    private val descriptions=listOf(R.string.ui_base_desc,R.string.ui_alt1_desc,R.string.ui_alt2_desc,R.string.ui_alt3_desc,R.string.ui_alt4_desc)
+    val names=listOf(context.getString(R.string.ui_base))+ io.github.dovecoteescapee.byedpi.core.VeyraPresets.entries.mapIndexed {index,preset -> when(preset.id){"youtube-tcp" -> "YouTube TCP · test"; "youtube-wifi" -> "YouTube Wi-Fi · QUIC"; "youtube-quic-fake" -> "YouTube QUIC · fake"; "youtube-fast-start" -> "YouTube · быстрый старт"; "legacy-base" -> "Veyra Base · прежняя"; else -> "Veyra Alt ${index+1}"}}
+    private val descriptions=listOf(R.string.ui_base_desc,R.string.ui_alt1_desc,R.string.ui_alt2_desc,R.string.ui_alt3_desc,R.string.ui_alt4_desc,R.string.ui_youtube_tcp_desc,R.string.ui_youtube_wifi_desc,R.string.ui_youtube_quic_fake_desc,R.string.ui_youtube_fast_start_desc,R.string.ui_legacy_base_desc)
     fun showPage(next:String) {
         page=if(next in listOf("home","strategies","settings"))next else "home"
         binding.homePage.visibility=if(page=="home")View.VISIBLE else View.GONE

@@ -1,27 +1,35 @@
 {
-  "version": "1.2",
-  "transport": "unchanged from confirmed 1.1-beta.2-flowseal.1",
-  "user_confirmation": "integrated candidate works, including phone",
-  "android_version_code": 17,
-  "native_windows_execution_by_agent": false,
-  "native_android_execution_by_agent": false,
-  "linux_arm64_execution_by_agent": false,
-  "android_jvm": {
-    "tests": 89,
-    "failures": 0,
-    "errors": 0,
-    "skipped": 0
+  "version": "1.3",
+  "android": {
+    "versionCode": 23,
+    "variant": "release",
+    "package": "io.github.nosmokee.veyra.next.wifitest",
+    "updates_test_lineage": true,
+    "updates_original_1_2": false,
+    "unit_tests": {
+      "tests": 102,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "native_loopback_tests": 6,
+    "physical_device_tested_by_agent": false,
+    "real_youtube_latency_measured_by_agent": false
   },
-  "linux_tests": {
-    "tests": 39,
-    "failures": 0
+  "windows": {
+    "compiled_net48_x64": true,
+    "profiles_parsed": 23,
+    "one_time_base_migration_tested": true,
+    "recommendation_cases": 6,
+    "wpf_and_windivert_executed": false
   },
-  "anonymous_mtproto": {
-    "passes": 24,
-    "cycles": 3,
-    "authenticated_media_test": false
+  "linux": {
+    "tests": 42,
+    "x86_64_local_execution": true,
+    "aarch64_execution": false,
+    "native_binaries": "unchanged from provided 1.2 packages",
+    "browser_only_socks": true
   },
-  "ui_regression": "no Telegram toggle button; add-proxy only",
-  "windows": "Release x64 compilation successful",
-  "core_transport": "unchanged from user-confirmed candidate"
+  "user_observation": "Android QUIC 3 profile improved Wi-Fi playback, small startup delay remains; standalone Windows profile 1 worked earlier",
+  "github_publish_status": "verified separately after artifact upload"
 }

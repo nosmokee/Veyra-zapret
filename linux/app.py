@@ -3,7 +3,7 @@
 import argparse, atexit, concurrent.futures, fcntl, http.server, json, os, pathlib
 import secrets, shutil, signal, socket, ssl, subprocess, threading, time, webbrowser
 import html, platform, struct, urllib.parse
-VERSION = "1.2"
+VERSION = "1.3"
 from telegram_bridge import WebSocket
 import sys
 _ENGINE_DIR = pathlib.Path(__file__).resolve().parent/'telegram-engine'
@@ -15,7 +15,8 @@ class Bridge(FlowsealEngine):
     def __init__(self,secret,connector=None):super().__init__(secret.hex(),0)
 
 BASE = pathlib.Path(__file__).resolve().parent
-PROFILES = {'youtube': ('Veyra Base · SNI / TCP', ['--timeout','3','--disorder','1+s','--auto=torst','--split','1+s','--tlsrec','3+s']),
+PROFILES = {'base': ('Veyra Base', ['--timeout','5','--split','1+s','--tlsrec','3+s','--auto=torst,ssl_err','--disorder','1+s','--auto=torst,ssl_err','--split','1']),
+            'youtube': ('Veyra Base · прежняя', ['--timeout','3','--disorder','1+s','--auto=torst','--split','1+s','--tlsrec','3+s']),
             'split': ('Veyra Alt 1', ['--split', '1']),
             'disorder': ('Veyra Alt 2', ['--disorder', '1']),
             'tls': ('Veyra Alt 3', ['--tlsrec', '1']),
@@ -56,11 +57,11 @@ class Controller:
         self.engine=pathlib.Path(engine or BASE/'bin/ciadpi')
         self.lock=threading.RLock(); self.proc=None; self.log=None; self.port=0; self.error=''; self.checks=[]
         self.bridge=None;self.telegram_log="";self.ping_text='Замер WSS до Telegram через Veyra';self.browser_warning=''
-        self.profile='youtube'; self.theme='dark'; self.color='amber'; self.background='none'
+        self.profile='base'; self.theme='dark'; self.color='amber'; self.background='none'
         try:
             cfg=json.loads((self.data/'settings.json').read_text())
             if not isinstance(cfg,dict):cfg={}
-            if isinstance(cfg.get('profile'),str) and cfg.get('profile') in PROFILES: self.profile=cfg['profile']
+            if isinstance(cfg.get('profile'),str) and cfg.get('profile') in PROFILES and cfg.get('base_revision')==13: self.profile=cfg['profile']
             if cfg.get('theme') in ('dark','light'): self.theme=cfg['theme']
             if isinstance(cfg.get('color'),str) and cfg.get('color') in COLORS: self.color=cfg['color']
             if isinstance(cfg.get('background'),str) and cfg.get('background') in BACKGROUNDS: self.background=cfg['background']
@@ -69,7 +70,7 @@ class Controller:
     def save(self):
         path=self.data/'settings.json'; tmp=path.with_suffix('.tmp')
         with open(tmp,'w',encoding='utf8') as f:
-            os.chmod(tmp,0o600); json.dump({'profile':self.profile,'theme':self.theme,'color':self.color,'background':self.background},f)
+            os.chmod(tmp,0o600); json.dump({'profile':self.profile,'base_revision':13,'theme':self.theme,'color':self.color,'background':self.background},f)
         os.replace(tmp,path)
     def state(self):
         with self.lock:

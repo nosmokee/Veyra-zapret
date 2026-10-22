@@ -12,14 +12,14 @@ android {
     if (project.hasProperty("veyraPrebuiltNative")) sourceSets["main"].jniLibs.setSrcDirs(listOf("prebuilt-native/jniLibs"))
 
     defaultConfig {
-        applicationId = if (project.hasProperty("veyraIsolatedTest"))
+        applicationId = if (project.hasProperty("veyraWifiTest")) "io.github.nosmokee.veyra.next.wifitest" else if (project.hasProperty("veyraIsolatedTest"))
             "io.github.nosmokee.veyra.next.unifiedtest" else "io.github.nosmokee.veyra.next"
-        manifestPlaceholders["veyraAppLabel"] = if (project.hasProperty("veyraIsolatedTest"))
-            "Veyra Test" else "@string/app_name"
+        manifestPlaceholders["veyraAppLabel"] = if (project.hasProperty("veyraWifiTest")) "Veyra" else if (project.hasProperty("veyraIsolatedTest"))
+            "Veyra" else "@string/app_name"
         minSdk = 24
         targetSdk = 34
-        versionCode = 17
-        versionName = "1.2"
+        versionCode = 23
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -39,6 +39,7 @@ android {
     }
     buildTypes {
         release {
+            if(project.hasProperty("veyraSigningStore")) signingConfig = signingConfigs.getByName("debug")
             buildConfigField("String", "VERSION_NAME",  "\"${defaultConfig.versionName}\"")
 
             isMinifyEnabled = false
@@ -140,6 +141,6 @@ chaquopy {
     defaultConfig {
         version = "3.13"
         buildPython("python3.13")
-        pip { install("httpx[http2]==0.28.1"); install("-r", "../../telegram-engine/requirements.txt") }
+        pip { if (project.hasProperty("veyraOfflineWheels")) options("--no-index", "--find-links", project.property("veyraOfflineWheels").toString()); install("httpx[http2]==0.28.1"); install("-r", "../../telegram-engine/requirements.txt") }
     }
 }

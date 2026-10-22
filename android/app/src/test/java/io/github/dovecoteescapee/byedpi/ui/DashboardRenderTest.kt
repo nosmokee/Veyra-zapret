@@ -32,7 +32,7 @@ class DashboardRenderTest {
    val activity=controller.get();val b=activity.binding
    val ui=DashboardUi(b){};ui.render(state);ui.showPage(page)
    val root=b.root;root.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));root.layout(0,0,width,height)
-   assertEquals(5,b.strategyList.childCount)
+   assertEquals(10,b.strategyList.childCount)
    assertEquals(page=="home",b.homePage.visibility==View.VISIBLE)
    assertEquals(page=="settings",b.navSettings.isSelected)
    assertTrue(b.navHome.height>=44);assertTrue(b.navHome.width>=44)

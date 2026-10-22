@@ -85,7 +85,7 @@ class Tests(unittest.TestCase):
   self.assertEqual((pathlib.Path(self.tmp.name)/'settings.json').stat().st_mode&0o777,0o600)
  def test_10_corrupt_settings(self):
   for raw in ('{','[]','null','{"profile":[],"color":{},"background":[]}', '"text"'):
-   (pathlib.Path(self.tmp.name)/'settings.json').write_text(raw);c=app.Controller(self.tmp.name,ENGINE);self.assertEqual(c.profile,'youtube')
+   (pathlib.Path(self.tmp.name)/'settings.json').write_text(raw);c=app.Controller(self.tmp.name,ENGINE);self.assertEqual(c.profile,'base')
  def test_11_missing_engine(self):
   self.c.engine=pathlib.Path(self.tmp.name)/'absent'
   self.assertEqual(self.api('start')[0],400);self.assertFalse(self.c.running());self.assertIn('bin/ciadpi',self.c.error)

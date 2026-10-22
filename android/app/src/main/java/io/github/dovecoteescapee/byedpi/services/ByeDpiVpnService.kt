@@ -24,7 +24,7 @@ class ByeDpiVpnService : LifecycleVpnService() {
     private val operations = Mutex()
     private val nativeProxy = ByeDpiProxy()
     private val worker = OwnedNativeWorker(scope, object : NativeBackend {
-        override suspend fun prepare() = nativeProxy.prepareProxy(ByeDpiProxyPreferences.fromSharedPreferences(getPreferences()), getPreferences().getBoolean("veyra_block_quic", false))
+        override suspend fun prepare() = nativeProxy.prepareProxy(MediaProxyPreferences.fromContext(this@ByeDpiVpnService), getPreferences().getBoolean("veyra_block_quic", false))
         override suspend fun run(fd: Int) = nativeProxy.runPreparedProxy(fd)
         override suspend fun requestStop() = nativeProxy.stopProxy()
     })
